@@ -23,3 +23,17 @@ pub fn clear(attr: u8) void {
         }
     }
 }
+pub fn scrollUp(attr: u8) void {
+    for (0..HEIGHT - 1) |y| {
+        for (0..WIDTH) |x| {
+            const destination = y * WIDTH + x;
+            const source = (y + 1) * WIDTH + x;
+
+            VGA_BUFFER[destination] = VGA_BUFFER[source];
+        }
+    }
+
+    for (0..WIDTH) |x| {
+        putCell(x, HEIGHT - 1, ' ', attr);
+    }
+}
