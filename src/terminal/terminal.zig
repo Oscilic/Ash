@@ -91,24 +91,6 @@ pub const Terminal = struct {
     }
 
     fn scroll(self: *Terminal) void {
-        const buffer: [*]volatile u16 = @ptrFromInt(0xB8000);
-
-        for (0..vga.HEIGHT - 1) |y| {
-            for (0..vga.WIDTH) |x| {
-                const destination = y * vga.WIDTH + x;
-                const source = (y + 1) * vga.WIDTH + x;
-
-                buffer[destination] = buffer[source];
-            }
-        }
-
-        for (0..vga.WIDTH) |x| {
-            vga.putCell(
-                x,
-                vga.HEIGHT - 1,
-                ' ',
-                self.color,
-            );
-        }
+        vga.scrollUp(self.color);
     }
 };
