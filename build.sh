@@ -58,7 +58,7 @@ as --32 \
 echo "[3/6] Compiling Zig kernel..."
 
 zig build-obj \
-    "$KERNEL_SRC" \
+    "$SRC_DIR/root.zig" \
     -target x86-freestanding-none \
     -O ReleaseSafe \
     -femit-bin="$OBJ_DIR/kernel.o"
