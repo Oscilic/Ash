@@ -6,12 +6,17 @@ pub const Terminal = struct {
 
     color: u8 = vga.attribute(.white, .black),
 
+    fn syncCursor(self: *Terminal) void {
+        vga.setCursor(self.cursor_x, self.cursor_y);
+    }
+
     pub fn init(self: *Terminal) void {
         self.cursor_x = 0;
         self.cursor_y = 0;
         self.color = vga.attribute(.white, .black);
 
         vga.clear(self.color);
+        self.syncCursor();
     }
 
     pub fn setColor(self: *Terminal, fg: vga.Color, bg: vga.Color) void {
@@ -23,6 +28,8 @@ pub const Terminal = struct {
 
         self.cursor_x = 0;
         self.cursor_y = 0;
+
+        self.syncCursor();
     }
 
     pub fn write(self: *Terminal, text: []const u8) void {
@@ -65,6 +72,7 @@ pub const Terminal = struct {
         if (self.cursor_x >= vga.WIDTH) {
             self.newLine();
         }
+        self.syncCursor();
     }
 
     pub fn newLine(self: *Terminal) void {
@@ -75,6 +83,7 @@ pub const Terminal = struct {
             self.scroll();
             self.cursor_y = vga.HEIGHT - 1;
         }
+        self.syncCursor();
     }
 
     pub fn backspace(self: *Terminal) void {
@@ -87,6 +96,7 @@ pub const Terminal = struct {
                 ' ',
                 self.color,
             );
+            self.syncCursor();
         }
     }
 

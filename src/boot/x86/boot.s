@@ -2,7 +2,7 @@
 .set MULTIBOOT2_ARCHITECTURE_I386, 0
 .set MULTIBOOT2_BOOT_MAGIC, 0x36D76289
 
-.section .multiboot
+.section .multiboot, "a", @progbits
 .balign 8
 
 header_start:
@@ -39,6 +39,38 @@ _start:
     push %ebx
     push %eax
 
+    # Comprobar FXSR, SSE y SSE2.
+    movl $1, %eax
+    cpuid
+
+    # EDX bits 24, 25 y 26 deben estar activos.
+    movl %edx, %ecx
+    andl $0x07000000, %ecx
+    cmpl $0x07000000, %ecx
+    jne .Lno_sse
+
+    # Configurar CR0.
+    movl %cr0, %eax
+    orl $0x00000002, %eax
+    andl $0xFFFFFFF3, %eax
+    movl %eax, %cr0
+
+    # Configurar CR4.
+    movl %cr4, %eax
+    orl $0x00000600, %eax
+    movl %eax, %cr4
+
+    fninit
+
+    jmp .Lsse_ready
+
+    .Lno_sse:
+        cli
+    .Lno_sse_halt:
+        hlt
+        jmp .Lno_sse_halt
+
+    .Lsse_ready:
     call kernel_main
 
 .Lhang:

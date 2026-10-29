@@ -50,7 +50,9 @@ echo "[2/6] Assembling boot.s..."
 as --32 \
     "$BOOT_SRC" \
     -o "$OBJ_DIR/boot.o"
-
+as --32 \
+    src/arch/x86/exceptions.s \
+    -o build/obj/exceptions.o
 # ------------------------------------------------------------
 # 3. Compile Zig kernel
 # ------------------------------------------------------------
@@ -60,7 +62,8 @@ echo "[3/6] Compiling Zig kernel..."
 zig build-obj \
     "$SRC_DIR/root.zig" \
     -target x86-freestanding-none \
-    -O ReleaseSafe \
+    -O ReleaseFast \
+    -fno-stack-check \
     -femit-bin="$OBJ_DIR/kernel.o"
 
 # ------------------------------------------------------------
@@ -70,10 +73,12 @@ zig build-obj \
 echo "[4/6] Linking kernel..."
 
 ld -m elf_i386 \
-    -T "$LINKER_SCRIPT" \
-    -o "$KERNEL_ELF" \
-    "$OBJ_DIR/boot.o" \
-    "$OBJ_DIR/kernel.o"
+    -z max-page-size=0x1000 \
+    -T config/linker/x86.ld \
+    -o build/bin/kernel.elf \
+    build/obj/boot.o \
+    build/obj/exceptions.o \
+    build/obj/kernel.o
 
 # ------------------------------------------------------------
 # 5. Validate Multiboot2
@@ -108,5 +113,3 @@ echo "========================================"
 echo " Kernel: $KERNEL_ELF"
 echo " ISO:    $ASH_ISO"
 echo
-echo " Run with:"
-echo " qemu-system-i386 -cdrom \"$ASH_ISO\""

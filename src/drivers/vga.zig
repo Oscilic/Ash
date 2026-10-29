@@ -1,5 +1,18 @@
 const VGA_BUFFER: [*]volatile u16 = @ptrFromInt(0xB8000);
+const io = @import("../arch/x86/io.zig");
 
+const VGA_COMMAND_PORT: u16 = 0x3D4;
+const VGA_DATA_PORT: u16 = 0x3D5;
+
+pub fn setCursor(x: usize, y: usize) void {
+    if (x >= WIDTH or y >= HEIGHT) return;
+    const position: u16 = @intCast(y * WIDTH + x);
+
+    io.outb(VGA_COMMAND_PORT, 0x0F);
+    io.outb(VGA_DATA_PORT, @truncate(position));
+    io.outb(VGA_COMMAND_PORT, 0x0E);
+    io.outb(VGA_DATA_PORT, @truncate(position >> 8));
+}
 pub const WIDTH: usize = 80;
 pub const HEIGHT: usize = 25;
 
