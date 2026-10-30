@@ -4,13 +4,15 @@ const commands = @import("commands.zig");
 const layout = @import("../input/layout.zig");
 const editor_module = @import("line_editor.zig");
 const vga = @import("../drivers/vga.zig");
+const history_module = @import("history.zig");
+const History = history_module.History;
 const Terminal = terminal_module.Terminal;
 const LineEditor = editor_module.LineEditor;
 
 pub const Shell = struct {
     terminal: *Terminal,
-
     editor: LineEditor = .{},
+    history: History = .{},
     input_x: usize = 0,
     input_y: usize = 0,
     view_offset: usize = 0,
@@ -83,6 +85,20 @@ pub const Shell = struct {
                 .delete => {
                     if (self.editor.delete()) self.redraw();
                 },
+                .arrow_up => {
+                    if (self.history.previous(self.editor.text())) |command| {
+                        self.editor.loadText(command);
+                        self.redraw();
+                    }
+                },
+
+                .arrow_down => {
+                    if (self.history.nextEntry()) |command| {
+                        self.editor.loadText(command);
+                        self.redraw();
+                    }
+                },
+
                 .arrow_left => {
                     if (event.modifiers.shift()) {
                         self.editor.moveLeftSelecting();
@@ -161,12 +177,11 @@ pub const Shell = struct {
         self.terminal.newLine();
 
         if (self.editor.length > 0) {
-            commands.execute(
-                self.terminal,
-                self.editor.text(),
-            );
+            self.history.add(self.editor.text());
+            commands.execute(self.terminal, self.editor.text());
         }
 
+        self.history.resetNavigation();
         self.editor.reset();
         self.prompt();
     }

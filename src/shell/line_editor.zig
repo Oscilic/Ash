@@ -237,6 +237,16 @@ pub const LineEditor = struct {
             self.moveRight();
         }
     }
+    pub fn loadText(self: *LineEditor, loaded_text: []const u8) void {
+        self.length = @min(loaded_text.len, CAPACITY);
+
+        for (0..self.length) |i| {
+            self.buffer[i] = loaded_text[i];
+        }
+
+        self.cursor = self.length;
+        self.clearSelection();
+    }
 };
 
 //Pruebas
@@ -440,4 +450,26 @@ test "escribir no deja una seleccion residual" {
         "ABCDEX",
         editor.text(),
     );
+}
+test "cargar texto reemplaza la linea" {
+    var editor = LineEditor{};
+
+    for ("ABCDE") |char| {
+        _ = editor.writeChar(char);
+    }
+
+    editor.selectAll();
+    editor.loadText("help");
+
+    try std.testing.expectEqualStrings(
+        "help",
+        editor.text(),
+    );
+
+    try std.testing.expectEqual(
+        @as(usize, 4),
+        editor.cursor,
+    );
+
+    try std.testing.expect(!editor.hasSelection());
 }
