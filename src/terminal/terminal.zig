@@ -103,4 +103,64 @@ pub const Terminal = struct {
     fn scroll(self: *Terminal) void {
         vga.scrollUp(self.color);
     }
+
+    pub fn setCursorPosition(
+        self: *Terminal,
+        x: usize,
+        y: usize,
+    ) void {
+        if (x >= vga.WIDTH or y >= vga.HEIGHT) return;
+
+        self.cursor_x = x;
+        self.cursor_y = y;
+        self.syncCursor();
+    }
+
+    pub fn drawInputLine(
+        self: *Terminal,
+        start_x: usize,
+        start_y: usize,
+        text: []const u8,
+        cursor: usize,
+        view_offset: usize,
+        selection_start: usize,
+        selection_end: usize,
+    ) void {
+        if (start_x >= vga.WIDTH or start_y >= vga.HEIGHT) return;
+
+        const available = vga.WIDTH - start_x;
+        const selection_color = vga.attribute(.black, .yellow);
+
+        for (0..available) |i| {
+            const index = view_offset + i;
+
+            const char: u8 = if (index < text.len)
+                text[index]
+            else
+                ' ';
+
+            const selected =
+                index < text.len and
+                index >= selection_start and
+                index < selection_end;
+
+            vga.putCell(
+                start_x + i,
+                start_y,
+                char,
+                if (selected) selection_color else self.color,
+            );
+        }
+
+        const relative_cursor =
+            if (cursor >= view_offset)
+                cursor - view_offset
+            else
+                0;
+
+        self.setCursorPosition(
+            start_x + @min(relative_cursor, available - 1),
+            start_y,
+        );
+    }
 };

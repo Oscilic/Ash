@@ -18,6 +18,7 @@ pub const KeyCode = enum {
 
     home,
     end,
+    insert,
     delete,
 
     character,
@@ -118,6 +119,7 @@ fn identify(key: u8, extended: bool) KeyCode {
 
             0x47 => .home,
             0x4F => .end,
+            0x52 => .insert,
             0x53 => .delete,
 
             else => .unknown,

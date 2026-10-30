@@ -25,7 +25,7 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
 
         .version => {
             terminal.writeLine("Ash Operating System");
-            terminal.writeLine("ASH-M0.3.0 | IA-32");
+            terminal.writeLine("ASH-M0.4.0a | IA-32");
         },
 
         .echo => {

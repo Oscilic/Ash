@@ -2,18 +2,22 @@ const terminal_module = @import("../terminal/terminal.zig");
 const ps2 = @import("../drivers/ps2.zig");
 const commands = @import("commands.zig");
 const layout = @import("../input/layout.zig");
+const editor_module = @import("line_editor.zig");
+const vga = @import("../drivers/vga.zig");
 const Terminal = terminal_module.Terminal;
-
-const INPUT_CAPACITY: usize = 64;
+const LineEditor = editor_module.LineEditor;
 
 pub const Shell = struct {
     terminal: *Terminal,
 
-    input: [INPUT_CAPACITY]u8 = undefined,
-    input_len: usize = 0,
+    editor: LineEditor = .{},
+    input_x: usize = 0,
+    input_y: usize = 0,
+    view_offset: usize = 0,
 
     pub fn init(self: *Shell) void {
-        self.input_len = 0;
+        self.editor.reset();
+        self.view_offset = 0;
 
         self.terminal.setColor(.yellow, .black);
         self.terminal.writeLine("Ash Interactive Shell");
@@ -30,6 +34,37 @@ pub const Shell = struct {
         self.terminal.write("Ash> ");
 
         self.terminal.setColor(.white, .black);
+
+        self.input_x = self.terminal.cursor_x;
+        self.input_y = self.terminal.cursor_y;
+        self.view_offset = 0;
+
+        self.redraw();
+    }
+
+    fn redraw(self: *Shell) void {
+        const width = vga.WIDTH - self.input_x;
+
+        self.view_offset = self.editor.visibleOffset(
+            self.view_offset,
+            width,
+        );
+        vga.setCursorShape(
+            if (self.editor.mode == .insert)
+                .block
+            else
+                .underline,
+        );
+
+        self.terminal.drawInputLine(
+            self.input_x,
+            self.input_y,
+            self.editor.text(),
+            self.editor.cursor,
+            self.view_offset,
+            self.editor.selectionStart(),
+            self.editor.selectionEnd(),
+        );
     }
 
     pub fn run(self: *Shell) noreturn {
@@ -40,57 +75,99 @@ pub const Shell = struct {
 
             switch (event.code) {
                 .enter => self.enter(),
-                .backspace => self.backspace(),
 
-                .arrow_left,
-                .arrow_right,
-                .arrow_up,
-                .arrow_down,
-                .home,
-                .end,
-                .delete,
-                => {
-                    // Reservado para la edición de línea.
+                .backspace => {
+                    if (self.editor.backspace()) self.redraw();
+                },
+
+                .delete => {
+                    if (self.editor.delete()) self.redraw();
+                },
+                .arrow_left => {
+                    if (event.modifiers.shift()) {
+                        self.editor.moveLeftSelecting();
+                    } else {
+                        self.editor.moveLeftNormal();
+                    }
+                    self.redraw();
+                },
+
+                .arrow_right => {
+                    if (event.modifiers.shift()) {
+                        self.editor.moveRightSelecting();
+                    } else {
+                        self.editor.moveRightNormal();
+                    }
+                    self.redraw();
+                },
+
+                .home => {
+                    if (event.modifiers.shift()) {
+                        self.editor.moveHomeSelecting();
+                    } else {
+                        self.editor.clearSelection();
+                        self.editor.moveHome();
+                    }
+                    self.redraw();
+                },
+
+                .end => {
+                    if (event.modifiers.shift()) {
+                        self.editor.moveEndSelecting();
+                    } else {
+                        self.editor.clearSelection();
+                        self.editor.moveEnd();
+                    }
+                    self.redraw();
+                },
+
+                .insert => {
+                    self.editor.toggleMode();
+                    self.redraw();
                 },
 
                 else => {
+                    if (event.modifiers.ctrl() and
+                        !event.modifiers.alt() and
+                        event.code == .character and
+                        event.scancode == 0x1E)
+                    {
+                        self.editor.selectAll();
+                        self.redraw();
+                        continue;
+                    }
+                    if (event.modifiers.ctrl() or
+                        event.modifiers.alt())
+                    {
+                        continue;
+                    }
+
                     const char = layout.toChar(event) orelse continue;
-                    self.insert(char);
+
+                    if (self.editor.writeChar(char)) {
+                        self.redraw();
+                    }
                 },
             }
         }
     }
 
-    fn insert(self: *Shell, char: u8) void {
-        if (char < 32 or char > 126) return;
-
-        if (self.input_len >= INPUT_CAPACITY) {
-            return;
-        }
-
-        self.input[self.input_len] = char;
-        self.input_len += 1;
-
-        self.terminal.putChar(char);
-    }
-
-    fn backspace(self: *Shell) void {
-        if (self.input_len == 0) return;
-
-        self.input_len -= 1;
-        self.terminal.backspace();
-    }
-
     fn enter(self: *Shell) void {
+        // Ubicar la salida después del área de entrada.
+        self.terminal.setCursorPosition(
+            self.input_x,
+            self.input_y,
+        );
         self.terminal.newLine();
 
-        if (self.input_len > 0) {
-            const command = self.input[0..self.input_len];
-
-            commands.execute(self.terminal, command);
+        if (self.editor.length > 0) {
+            commands.execute(
+                self.terminal,
+                self.editor.text(),
+            );
         }
 
-        self.input_len = 0;
+        self.editor.reset();
         self.prompt();
     }
 };
