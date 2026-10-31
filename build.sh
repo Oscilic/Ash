@@ -53,6 +53,10 @@ as --32 \
 as --32 \
     src/arch/x86/exceptions.s \
     -o build/obj/exceptions.o
+as --32 \
+    src/arch/x86/irq.s \
+    -o build/obj/irq.o
+as --32 src/arch/x86/gdt.s -o build/obj/gdt.o
 # ------------------------------------------------------------
 # 3. Compile Zig kernel
 # ------------------------------------------------------------
@@ -78,7 +82,9 @@ ld -m elf_i386 \
     -o build/bin/kernel.elf \
     build/obj/boot.o \
     build/obj/exceptions.o \
-    build/obj/kernel.o
+    build/obj/kernel.o \
+    build/obj/irq.o \
+    build/obj/gdt.o
 
 # ------------------------------------------------------------
 # 5. Validate Multiboot2

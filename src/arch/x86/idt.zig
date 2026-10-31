@@ -20,6 +20,7 @@ var entries: [256]IDTEntry align(8) = undefined;
 
 // Tabla de direcciones definida en exceptions.s
 extern const ash_isr_table: [32]u32;
+extern const ash_irq_table: [16]u32;
 
 fn currentCodeSegment() u16 {
     return asm volatile ("mov %%cs, %[result]"
@@ -58,6 +59,13 @@ pub fn init() void {
         setGate(
             @intCast(i),
             ash_isr_table[i],
+            cs,
+        );
+    }
+    for (0..16) |i| {
+        setGate(
+            @intCast(0x20 + i),
+            ash_irq_table[i],
             cs,
         );
     }
