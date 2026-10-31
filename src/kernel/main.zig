@@ -36,17 +36,15 @@ pub export fn kernel_main(
         .terminal = &terminal,
     };
     idt.init();
-    //const sse = cpu.getSSEState();
-    //const features = cpu.getCPUFeatures();
-
-    //terminal.writeLine(if (sse.em) "CR0.EM = 1" else "CR0.EM = 0");
-    //terminal.writeLine(if (sse.ts) "CR0.TS = 1" else "CR0.TS = 0");
-    //terminal.writeLine(if (sse.osfxsr) "CR4.OSFXSR = 1" else "CR4.OSFXSR = 0");
-    //terminal.writeLine(if (sse.osxmmexcpt) "CR4.OSXMMEXCPT = 1" else "CR4.OSXMMEXCPT = 0");
-    //terminal.writeLine(if (features.fxsr) "CPU FXSR: YES" else "CPU FXSR: NO");
-    //terminal.writeLine(if (features.sse) "CPU SSE: YES" else "CPU SSE: NO");
-    //terminal.writeLine(if (features.sse2) "CPU SSE2: YES" else "CPU SSE2: NO");
-
+    const features = cpu.getCPUFeatures();
+    const sse = cpu.getSSEState();
+    terminal.writeLine(if (sse.em) "CR0.EM = 1" else "CR0.EM = 0");
+    terminal.writeLine(if (sse.ts) "CR0.TS = 1" else "CR0.TS = 0");
+    terminal.writeLine(if (sse.osfxsr) "CR4.OSFXSR = 1" else "CR4.OSFXSR = 0");
+    terminal.writeLine(if (sse.osxmmexcpt) "CR4.OSXMMEXCPT = 1" else "CR4.OSXMMEXCPT = 0");
+    terminal.writeLine(if (features.fxsr) "CPU FXSR: YES" else "CPU FXSR: NO");
+    terminal.writeLine(if (features.sse) "CPU SSE: YES" else "CPU SSE: NO");
+    terminal.writeLine(if (features.sse2) "CPU SSE2: YES" else "CPU SSE2: NO");
     shell.init();
     shell.run();
 }

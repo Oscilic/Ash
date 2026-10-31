@@ -5,14 +5,18 @@ const layout = @import("../input/layout.zig");
 const editor_module = @import("line_editor.zig");
 const vga = @import("../drivers/vga.zig");
 const history_module = @import("history.zig");
+const notice_module = @import("../kernel/notice.zig");
+const NoticeQueue = notice_module.NoticeQueue;
 const History = history_module.History;
 const Terminal = terminal_module.Terminal;
 const LineEditor = editor_module.LineEditor;
+const std = @import("std");
 
 pub const Shell = struct {
     terminal: *Terminal,
     editor: LineEditor = .{},
     history: History = .{},
+    notices: NoticeQueue = .{},
     input_x: usize = 0,
     input_y: usize = 0,
     view_offset: usize = 0,
@@ -177,12 +181,47 @@ pub const Shell = struct {
         self.terminal.newLine();
 
         if (self.editor.length > 0) {
-            self.history.add(self.editor.text());
-            commands.execute(self.terminal, self.editor.text());
+            const command = self.editor.text();
+
+            self.history.add(command);
+
+            if (std.mem.eql(u8, command, "notice test")) {
+                self.notices.push(
+                    .info,
+                    "Notice subsystem initialized",
+                );
+
+                self.notices.push(
+                    .warning,
+                    "Simulated memory warning",
+                );
+
+                self.notices.push(
+                    .err,
+                    "Simulated device failure",
+                );
+
+                self.printNotices();
+            } else {
+                commands.execute(self.terminal, command);
+            }
         }
 
         self.history.resetNavigation();
         self.editor.reset();
         self.prompt();
+    }
+    fn printNotices(self: *Shell) void {
+        while (self.notices.pop()) |notice| {
+            const prefix: []const u8 = switch (notice.severity) {
+                .info => "[INFO] ",
+                .warning => "[WARN] ",
+                .err => "[ERROR] ",
+                .critical => "[CRITICAL] ",
+            };
+
+            self.terminal.write(prefix);
+            self.terminal.writeLine(notice.text());
+        }
     }
 };
