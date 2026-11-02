@@ -36,10 +36,12 @@ pub const Shell = struct {
     }
 
     fn prompt(self: *Shell) void {
+        const previous_color = self.terminal.color;
+
         self.terminal.setColor(.yellow, .black);
         self.terminal.write("Ash> ");
 
-        self.terminal.setColor(.white, .black);
+        self.terminal.color = previous_color;
 
         self.input_x = self.terminal.cursor_x;
         self.input_y = self.terminal.cursor_y;
@@ -47,7 +49,6 @@ pub const Shell = struct {
 
         self.redraw();
     }
-
     fn redraw(self: *Shell) void {
         const width = vga.WIDTH - self.input_x;
 

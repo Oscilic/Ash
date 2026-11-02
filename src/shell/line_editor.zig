@@ -110,6 +110,10 @@ pub const LineEditor = struct {
     }
 
     pub fn delete(self: *LineEditor) bool {
+        if (self.hasSelection()) {
+            return self.deleteSelection();
+        }
+
         if (self.cursor >= self.length) return false;
 
         var i = self.cursor;

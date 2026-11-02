@@ -4,6 +4,7 @@ const parser = @import("parser.zig");
 const resolver = @import("resolver.zig");
 const time = @import("../kernel/time.zig");
 const irq = @import("../kernel/irq.zig");
+const vga = @import("../drivers/vga.zig");
 
 pub fn execute(terminal: *Terminal, input: []const u8) void {
     const parsed = parser.parse(input);
@@ -25,7 +26,7 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
             terminal.writeLine("  echo     Print text");
             terminal.writeLine("  waitsec  Wait specified seconds");
             terminal.writeLine("  waitms   Wait specified milliseconds");
-            terminal.writeLine("  ticks    Display current ticks value");
+            terminal.writeLine("  uptime   Display system uptime");
         },
 
         .version => {
@@ -54,26 +55,9 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
                 return;
             }
 
-            const before = irq.ticks();
-
             terminal.writeLine("Waiting...");
             time.waitSec(seconds);
 
-            const after = irq.ticks();
-            const elapsed = after -% before;
-
-            var buffer: [64]u8 = undefined;
-
-            const message = std.fmt.bufPrint(
-                &buffer,
-                "Elapsed ticks: 0x{x:0>8}{x:0>8}",
-                .{
-                    @as(u32, @truncate(elapsed >> 32)),
-                    @as(u32, @truncate(elapsed)),
-                },
-            ) catch unreachable;
-
-            terminal.writeLine(message);
             terminal.writeLine("Wait completed.");
         },
 
@@ -93,44 +77,62 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
             terminal.writeLine("Wait completed.");
         },
 
-        .ticks => {
-            const current = irq.ticks();
+        .uptime => {
+            const sys_uptime = time.Duration.uptime();
 
-            const high: u32 = @truncate(current >> 32);
-            const low: u32 = @truncate(current);
-
-            var buffer: [64]u8 = undefined;
+            var buffer: [128]u8 = undefined;
 
             const message = std.fmt.bufPrint(
                 &buffer,
-                "Ticks: 0x{x:0>8}{x:0>8}",
-                .{ high, low },
+                "System uptime:\n   {d} days, {d} hours, {d} minutes, {d} seconds, {d} milliseconds.",
+                .{
+                    sys_uptime.days,
+                    sys_uptime.hours,
+                    sys_uptime.minutes,
+                    sys_uptime.seconds,
+                    sys_uptime.milliseconds,
+                },
             ) catch unreachable;
 
             terminal.writeLine(message);
         },
-    }
-}
-pub fn testIndexOfScalar(
-    terminal: anytype,
-) void {
-    const input = "echo hola";
+        .color => {
+            var tokens = std.mem.tokenizeScalar(u8, parsed.args, ' ');
 
-    terminal.writeLine("INDEX TEST: START");
+            const fg_text = tokens.next() orelse {
+                terminal.writeLine("Usage: color <fg> <bg>");
+                return;
+            };
 
-    const result = std.mem.indexOfScalar(
-        u8,
-        input,
-        ' ',
-    );
+            const bg_text = tokens.next() orelse {
+                terminal.writeLine("Usage: color <fg> <bg>");
+                return;
+            };
+            const fg_number = std.fmt.parseInt(u8, fg_text, 10) catch {
+                terminal.writeLine("Invalid foreground color.");
+                return;
+            };
 
-    if (result) |position| {
-        if (position == 4) {
-            terminal.writeLine("INDEX TEST: PASS");
-        } else {
-            terminal.writeLine("INDEX TEST: WRONG POSITION");
-        }
-    } else {
-        terminal.writeLine("INDEX TEST: NOT FOUND");
+            const bg_number = std.fmt.parseInt(u8, bg_text, 10) catch {
+                terminal.writeLine("Invalid background color.");
+                return;
+            };
+
+            if (fg_number > 15 or bg_number > 15) {
+                terminal.writeLine("Colors must be between 0 and 15.");
+                return;
+            }
+
+            const fg: vga.Color = @enumFromInt(fg_number);
+            const bg: vga.Color = @enumFromInt(bg_number);
+
+            if (fg == bg) {
+                terminal.writeLine("Foreground and background cannot be identical.");
+                return;
+            }
+
+            terminal.setColor(fg, bg);
+            terminal.writeLine("Color test");
+        },
     }
 }

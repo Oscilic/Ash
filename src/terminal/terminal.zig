@@ -3,6 +3,9 @@ const vga = @import("../drivers/vga.zig");
 pub const Terminal = struct {
     cursor_x: usize = 0,
     cursor_y: usize = 0,
+    col: u8 = vga.attribute(.white, .black),
+    default_color: u8 = vga.attribute(.white, .black),
+    clear_color: u8 = vga.attribute(.white, .black),
 
     color: u8 = vga.attribute(.white, .black),
 

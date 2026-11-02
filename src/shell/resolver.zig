@@ -7,7 +7,8 @@ pub const Command = enum {
     echo,
     waitsec,
     waitms,
-    ticks,
+    uptime,
+    color,
     unknown,
 };
 
@@ -19,11 +20,13 @@ pub fn resolve(name: []const u8) Command {
     if (std.mem.eql(u8, name, "echo")) return .echo;
     if (std.mem.eql(u8, name, "waitsec")) return .waitsec;
     if (std.mem.eql(u8, name, "waitms")) return .waitms;
-    if (std.mem.eql(u8, name, "ticks")) return .ticks;
+    if (std.mem.eql(u8, name, "uptime")) return .uptime;
+    if (std.mem.eql(u8, name, "color")) return .color;
 
     // Prioridad 2: alias
     if (std.mem.eql(u8, name, "cls")) return .clear;
     if (std.mem.eql(u8, name, "ver")) return .version;
+    if (std.mem.eql(u8, name, "col")) return .color;
 
     return .unknown;
 }
