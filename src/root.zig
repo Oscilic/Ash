@@ -10,5 +10,5 @@ comptime {
     _ = kernel.kernel_main;
     _ = exceptions.ash_exception_handler;
     _ = memory.memset;
-    _ = @import("kernel/irq.zig");
+    _ = irq.ash_irq_handler;
 }

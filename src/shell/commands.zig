@@ -3,7 +3,6 @@ const Terminal = @import("../terminal/terminal.zig").Terminal;
 const parser = @import("parser.zig");
 const resolver = @import("resolver.zig");
 const time = @import("../kernel/time.zig");
-const irq = @import("../kernel/irq.zig");
 const vga = @import("../drivers/vga.zig");
 
 pub fn execute(terminal: *Terminal, input: []const u8) void {
@@ -27,11 +26,12 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
             terminal.writeLine("  waitsec  Wait specified seconds");
             terminal.writeLine("  waitms   Wait specified milliseconds");
             terminal.writeLine("  uptime   Display system uptime");
+            terminal.writeLine("  color    Change terminal color");
         },
 
         .version => {
             terminal.writeLine("Ash Operating System");
-            terminal.writeLine("ASH-M0.5.0a | IA-32");
+            terminal.writeLine("ASH-M0.5.0 | IA-32");
         },
 
         .echo => {
@@ -39,9 +39,12 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
         },
 
         .unknown => {
+            const previous_color = terminal.color;
+
             terminal.setColor(.light_red, .black);
             terminal.writeLine("Unknown command.");
-            terminal.setColor(.white, .black);
+
+            terminal.color = previous_color;
         },
 
         .waitsec => {
@@ -132,7 +135,6 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
             }
 
             terminal.setColor(fg, bg);
-            terminal.writeLine("Color test");
         },
     }
 }

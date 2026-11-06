@@ -1,7 +1,7 @@
 const terminal_module = @import("../terminal/terminal.zig");
 const ps2 = @import("../drivers/ps2.zig");
 const commands = @import("commands.zig");
-const layout = @import("../input/layout.zig");
+const layout = @import("../drivers/input/layout.zig");
 const editor_module = @import("line_editor.zig");
 const vga = @import("../drivers/vga.zig");
 const history_module = @import("history.zig");
@@ -10,6 +10,7 @@ const NoticeQueue = notice_module.NoticeQueue;
 const History = history_module.History;
 const Terminal = terminal_module.Terminal;
 const LineEditor = editor_module.LineEditor;
+const keyboard_irq_count = @import("../kernel/irq.zig").keyboard_irq_count;
 const std = @import("std");
 
 pub const Shell = struct {
@@ -24,14 +25,6 @@ pub const Shell = struct {
     pub fn init(self: *Shell) void {
         self.editor.reset();
         self.view_offset = 0;
-
-        self.terminal.setColor(.yellow, .black);
-        self.terminal.writeLine("Ash Interactive Shell");
-
-        self.terminal.setColor(.white, .black);
-        self.terminal.writeLine("Type 'help' for commands.");
-        self.terminal.writeLine("");
-
         self.prompt();
     }
 
@@ -174,7 +167,6 @@ pub const Shell = struct {
     }
 
     fn enter(self: *Shell) void {
-        // Ubicar la salida después del área de entrada.
         self.terminal.setCursorPosition(
             self.input_x,
             self.input_y,
@@ -224,5 +216,8 @@ pub const Shell = struct {
             self.terminal.write(prefix);
             self.terminal.writeLine(notice.text());
         }
+    }
+    pub fn keyboardIrqCount() u32 {
+        return @volatileCast(&keyboard_irq_count).*;
     }
 };
