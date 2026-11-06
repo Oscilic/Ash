@@ -4,6 +4,7 @@ const parser = @import("parser.zig");
 const resolver = @import("resolver.zig");
 const time = @import("../kernel/time.zig");
 const vga = @import("../drivers/vga.zig");
+const ps2 = @import("../drivers/ps2.zig");
 
 pub fn execute(terminal: *Terminal, input: []const u8) void {
     const parsed = parser.parse(input);
@@ -25,6 +26,7 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
             terminal.writeLine("  waitms        Wait specified milliseconds");
             terminal.writeLine("  uptime        Display system uptime");
             terminal.writeLine("  color (col)   Change terminal color");
+            terminal.writeLine("  irqstat       Show IRQ statistics");
         },
 
         .version => {
@@ -57,9 +59,12 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
             }
 
             terminal.writeLine("Waiting...");
-            time.waitSec(seconds);
-
-            terminal.writeLine("Wait completed.");
+            if (time.waitSecCancelable(seconds)) {
+                terminal.writeLine("Wait completed.");
+            } else {
+                terminal.writeLine("^C");
+                terminal.writeLine("Command canceled.");
+            }
         },
 
         .waitms => {
@@ -74,8 +79,12 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
             }
 
             terminal.writeLine("Waiting...");
-            time.waitMs(milliseconds);
-            terminal.writeLine("Wait completed.");
+            if (time.waitMsCancelable(milliseconds)) {
+                terminal.writeLine("Wait completed.");
+            } else {
+                terminal.writeLine("^C");
+                terminal.writeLine("Command canceled.");
+            }
         },
 
         .uptime => {
@@ -133,6 +142,20 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
             }
 
             terminal.setColor(fg, bg);
+        },
+        .irqstat => {
+            const dropped = ps2.getDroppedScancodes();
+            const pending = ps2.getPendingScancodes();
+
+            var buffer: [128]u8 = undefined;
+
+            const message = std.fmt.bufPrint(
+                &buffer,
+                "PS/2 dropped scancodes: {d}, pending: {d}",
+                .{ dropped, pending },
+            ) catch unreachable;
+
+            terminal.writeLine(message);
         },
     }
 }

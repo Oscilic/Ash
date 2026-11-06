@@ -21,6 +21,9 @@ pub const ScancodeQueue = struct {
         self.tail = (self.tail + 1) & (self.buffer.len - 1);
         return scancode;
     }
+    pub fn count(self: *const ScancodeQueue) usize {
+        return (self.head -% self.tail) & (self.buffer.len - 1);
+    }
 };
 pub fn selfTest() bool {
     var queue: ScancodeQueue = .{};
@@ -35,5 +38,35 @@ pub fn selfTest() bool {
 
     if (queue.dequeue() != null) return false;
 
+    // Llenar la cola.
+    for (0..255) |i| {
+        if (!queue.enqueue(@intCast(i))) return false;
+    }
+
+    // Comprobar saturación.
+    if (queue.enqueue(0xFF)) return false;
+
+    // Liberar diez posiciones.
+    for (0..10) |i| {
+        if (queue.dequeue() != @as(u8, @intCast(i))) return false;
+    }
+
+    // Reutilizar las diez posiciones.
+    for (0..10) |i| {
+        if (!queue.enqueue(@intCast(i))) return false;
+    }
+
+    // Verificar los 245 elementos originales restantes.
+    for (10..255) |i| {
+        if (queue.dequeue() != @as(u8, @intCast(i))) return false;
+    }
+
+    // Verificar los diez elementos nuevos.
+    for (0..10) |i| {
+        if (queue.dequeue() != @as(u8, @intCast(i))) return false;
+    }
+
+    // Comprobar que la cola está vacía.
+    if (queue.dequeue() != null) return false;
     return true;
 }

@@ -1,16 +1,13 @@
-var requested: bool = false;
+var requested: u8 = 0;
 
 pub fn request() void {
-    const ptr: *volatile bool = @volatileCast(&requested);
-    ptr.* = true;
+    @atomicStore(u8, &requested, 1, .monotonic);
 }
 
 pub fn isRequested() bool {
-    const ptr: *volatile bool = @volatileCast(&requested);
-    return ptr.*;
+    return @atomicLoad(u8, &requested, .monotonic) != 0;
 }
 
 pub fn clear() void {
-    const ptr: *volatile bool = @volatileCast(&requested);
-    ptr.* = false;
+    @atomicStore(u8, &requested, 0, .monotonic);
 }

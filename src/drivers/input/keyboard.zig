@@ -20,12 +20,21 @@ pub const KeyCode = enum {
     end,
     insert,
     delete,
+    num_lock,
 
     character,
     enter,
     backspace,
     tab,
     escape,
+
+    numpad_digit,
+    numpad_decimal,
+    numpad_add,
+    numpad_subtract,
+    numpad_multiply,
+    numpad_divide,
+    numpad_enter,
 };
 
 pub const Modifiers = struct {
@@ -38,6 +47,7 @@ pub const Modifiers = struct {
 
     left_alt: bool = false,
     right_alt: bool = false,
+    num_lock: bool = false,
 
     pub fn shift(self: Modifiers) bool {
         return self.left_shift or self.right_shift;
@@ -59,10 +69,37 @@ pub const KeyEvent = struct {
     pressed: bool,
     modifiers: Modifiers,
 };
+pub fn navigationCode(event: KeyEvent) KeyCode {
+    if (event.modifiers.num_lock) {
+        return event.code;
+    }
+
+    if (event.code == .numpad_decimal) {
+        return .delete;
+    }
+
+    if (event.code != .numpad_digit) {
+        return event.code;
+    }
+
+    return switch (event.scancode) {
+        0x48 => .arrow_up,
+        0x50 => .arrow_down,
+        0x4B => .arrow_left,
+        0x4D => .arrow_right,
+
+        0x47 => .home,
+        0x4F => .end,
+        0x52 => .insert,
+
+        else => event.code,
+    };
+}
 
 pub const Keyboard = struct {
     modifiers: Modifiers = .{},
     caps_pressed: bool = false,
+    num_pressed: bool = false,
 
     pub fn process(
         self: *Keyboard,
@@ -91,6 +128,14 @@ pub const Keyboard = struct {
                 }
 
                 self.caps_pressed = pressed;
+            },
+            .num_lock => {
+                if (pressed and !self.num_pressed) {
+                    self.modifiers.num_lock =
+                        !self.modifiers.num_lock;
+                }
+
+                self.num_pressed = pressed;
             },
 
             else => {},
@@ -122,6 +167,9 @@ fn identify(key: u8, extended: bool) KeyCode {
             0x52 => .insert,
             0x53 => .delete,
 
+            0x1C => .numpad_enter,
+            0x35 => .numpad_divide,
+
             else => .unknown,
         };
     }
@@ -138,6 +186,13 @@ fn identify(key: u8, extended: bool) KeyCode {
         0x0E => .backspace,
         0x0F => .tab,
         0x01 => .escape,
+        0x45 => .num_lock,
+        0x47...0x49, 0x4B...0x4D, 0x4F...0x52 => .numpad_digit,
+
+        0x53 => .numpad_decimal,
+        0x4A => .numpad_subtract,
+        0x4E => .numpad_add,
+        0x37 => .numpad_multiply,
 
         else => .character,
     };

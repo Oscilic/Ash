@@ -15,6 +15,38 @@ const MAP = [_]u8{
 
 pub fn toChar(event: KeyEvent) ?u8 {
     if (!event.pressed) return null;
+    if (event.code == .numpad_digit) {
+        if (!event.modifiers.num_lock) return null;
+
+        return switch (event.scancode) {
+            0x52 => '0',
+            0x4F => '1',
+            0x50 => '2',
+            0x51 => '3',
+            0x4B => '4',
+            0x4C => '5',
+            0x4D => '6',
+            0x47 => '7',
+            0x48 => '8',
+            0x49 => '9',
+            else => null,
+        };
+    }
+    switch (event.code) {
+        .numpad_multiply => return '*',
+        .numpad_divide => return '/',
+        .numpad_subtract => return '-',
+        .numpad_add => return '+',
+
+        .numpad_decimal => {
+            if (event.modifiers.num_lock) {
+                return '.';
+            }
+            return null;
+        },
+
+        else => {},
+    }
     if (event.extended) return null;
     if (event.code != .character) return null;
 

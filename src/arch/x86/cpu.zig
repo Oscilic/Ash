@@ -89,3 +89,24 @@ pub fn enableSSE() SSEInitError!void {
 
     asm volatile ("fninit");
 }
+pub fn saveAndDisableInterrupts() u32 {
+    const flags: u32 = asm volatile (
+        \\pushfl
+        \\popl %[result]
+        : [result] "=r" (-> u32),
+        :
+        : .{ .memory = true });
+
+    asm volatile ("cli" ::: .{ .memory = true });
+
+    return flags;
+}
+
+pub fn restoreInterrupts(flags: u32) void {
+    asm volatile (
+        \\pushl %[flags]
+        \\popfl
+        :
+        : [flags] "r" (flags),
+        : .{ .memory = true });
+}

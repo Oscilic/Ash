@@ -11,6 +11,7 @@ const History = history_module.History;
 const Terminal = terminal_module.Terminal;
 const LineEditor = editor_module.LineEditor;
 const keyboard_irq_count = @import("../kernel/irq.zig").keyboard_irq_count;
+const keyboard = @import("../drivers/input/keyboard.zig");
 const std = @import("std");
 
 pub const Shell = struct {
@@ -72,9 +73,10 @@ pub const Shell = struct {
             const event = ps2.pollEvent() orelse continue;
 
             if (!event.pressed) continue;
+            const logical_code = keyboard.navigationCode(event);
 
-            switch (event.code) {
-                .enter => self.enter(),
+            switch (logical_code) {
+                .enter, .numpad_enter => self.enter(),
 
                 .backspace => {
                     if (self.editor.backspace()) self.redraw();

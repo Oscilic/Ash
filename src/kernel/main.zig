@@ -7,6 +7,9 @@ const pit = @import("../arch/x86/pit.zig");
 const gdt = @import("../arch/x86/gdt.zig");
 const cpu = @import("../arch/x86/cpu.zig");
 
+const scancode_queue = @import("../drivers/input/scancode_queue.zig");
+const ps2 = @import("../drivers/ps2.zig");
+
 const MULTIBOOT2_MAGIC: u32 = 0x36D76289;
 
 fn halt() noreturn {
@@ -32,7 +35,17 @@ pub export fn kernel_main(
 
     splash.show(&terminal);
     terminal.writeLine("");
-
+    //if (!scancode_queue.selfTest()) {
+    //    terminal.writeLine("ASH: ScancodeQueue self-test failed!");
+    //    halt();
+    //} else {
+    //    terminal.writeLine("ASH: ScancodeQueue self-test passed.");
+    //}
+    //if (ps2.selfTestDroppedScancodes()) {
+    //    terminal.writeLine("ASH: PS/2 dropped counter self-test passed.");
+    //} else {
+    //    terminal.writeLine("ASH: PS/2 dropped counter self-test failed!");
+    //}
     var shell = shell_module.Shell{
         .terminal = &terminal,
     };

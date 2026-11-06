@@ -1,4 +1,6 @@
 const irq = @import("irq.zig");
+const ps2 = @import("../drivers/ps2.zig");
+const cancel = @import("../kernel/cancel.zig");
 
 pub const Duration = struct {
     days: u64,
@@ -48,4 +50,51 @@ pub fn waitMs(milliseconds: u64) void {
 
 pub fn waitSec(seconds: u64) void {
     waitTicks(seconds *| TICKS_PER_SECOND);
+}
+
+pub fn waitTicksCancelable(amount: u64) bool {
+    const start = irq.ticks();
+
+    cancel.clear();
+
+    while (irq.ticks() -% start < amount) {
+        while (ps2.pollEvent()) |event| {
+            if (!event.pressed) continue;
+
+            if (event.modifiers.ctrl() and
+                !event.modifiers.alt() and
+                event.code == .character and
+                event.scancode == 0x2E)
+            {
+                cancel.request();
+                break;
+            }
+        }
+
+        if (cancel.isRequested()) {
+            cancel.clear();
+            return false;
+        }
+
+        asm volatile ("pause");
+    }
+
+    cancel.clear();
+    return true;
+}
+
+pub fn waitMsCancelable(milliseconds: u64) bool {
+    if (milliseconds == 0) return true;
+
+    const ticks_needed =
+        milliseconds / 10 +
+        @as(u64, @intFromBool(milliseconds % 10 != 0));
+
+    return waitTicksCancelable(ticks_needed);
+}
+
+pub fn waitSecCancelable(seconds: u64) bool {
+    return waitTicksCancelable(
+        seconds *| TICKS_PER_SECOND,
+    );
 }
