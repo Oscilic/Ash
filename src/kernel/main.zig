@@ -5,6 +5,7 @@ const splash = @import("../terminal/splash.zig");
 const pic = @import("../arch/x86/pic.zig");
 const pit = @import("../arch/x86/pit.zig");
 const gdt = @import("../arch/x86/gdt.zig");
+const cpu = @import("../arch/x86/cpu.zig");
 
 const MULTIBOOT2_MAGIC: u32 = 0x36D76289;
 
@@ -35,6 +36,11 @@ pub export fn kernel_main(
     var shell = shell_module.Shell{
         .terminal = &terminal,
     };
+    cpu.enableSSE() catch {
+        terminal.setColor(.light_red, .black);
+        terminal.writeLine("ASH: CPU does not support SSE.");
+        halt();
+    };
 
     gdt.init();
     idt.init();
@@ -42,6 +48,7 @@ pub export fn kernel_main(
     pit.init();
 
     pic.unmask(0);
+    pic.unmask(1);
 
     shell.init();
 

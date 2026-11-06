@@ -16,32 +16,27 @@ fn ioWait() void {
 }
 
 pub fn init() void {
-    // No habilitamos ninguna IRQ todavía.
     io.outb(PIC1_DATA, 0xFF);
     io.outb(PIC2_DATA, 0xFF);
 
-    // ICW1: iniciar la secuencia de configuración.
     io.outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
     ioWait();
 
     io.outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
     ioWait();
 
-    // ICW2: establecer los vectores base.
     io.outb(PIC1_DATA, 0x20);
     ioWait();
 
     io.outb(PIC2_DATA, 0x28);
     ioWait();
 
-    // ICW3: configurar la conexión maestro-esclavo.
     io.outb(PIC1_DATA, 0x04);
     ioWait();
 
     io.outb(PIC2_DATA, 0x02);
     ioWait();
 
-    // ICW4: modo 8086.
     io.outb(PIC1_DATA, ICW4_8086);
     ioWait();
 
@@ -72,7 +67,6 @@ pub fn unmask(irq: u8) void {
     const mask = io.inb(port);
     io.outb(port, mask & ~(@as(u8, 1) << bit));
 
-    // Las IRQ del esclavo necesitan la línea IRQ2 del maestro.
     if (irq >= 8) {
         const master_mask = io.inb(PIC1_DATA);
         io.outb(PIC1_DATA, master_mask & ~@as(u8, 0x04));

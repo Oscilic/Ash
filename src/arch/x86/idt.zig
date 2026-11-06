@@ -18,7 +18,6 @@ comptime {
 
 var entries: [256]IDTEntry align(8) = undefined;
 
-// Tabla de direcciones definida en exceptions.s
 extern const ash_isr_table: [32]u32;
 extern const ash_irq_table: [16]u32;
 

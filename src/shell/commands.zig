@@ -17,21 +17,19 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
 
         .help => {
             terminal.writeLine("Available commands:");
-            terminal.writeLine("  help     Show available commands");
-            terminal.writeLine("  clear    Clear terminal");
-            terminal.writeLine("  cls      Alias for clear");
-            terminal.writeLine("  version  Show Ash version");
-            terminal.writeLine("  ver      Alias for version");
-            terminal.writeLine("  echo     Print text");
-            terminal.writeLine("  waitsec  Wait specified seconds");
-            terminal.writeLine("  waitms   Wait specified milliseconds");
-            terminal.writeLine("  uptime   Display system uptime");
-            terminal.writeLine("  color    Change terminal color");
+            terminal.writeLine("  help          Show available commands");
+            terminal.writeLine("  clear (cls)   Clear terminal");
+            terminal.writeLine("  version (ver) Show Ash version");
+            terminal.writeLine("  echo          Print text");
+            terminal.writeLine("  waitsec       Wait specified seconds");
+            terminal.writeLine("  waitms        Wait specified milliseconds");
+            terminal.writeLine("  uptime        Display system uptime");
+            terminal.writeLine("  color (col)   Change terminal color");
         },
 
         .version => {
             terminal.writeLine("Ash Operating System");
-            terminal.writeLine("ASH-M0.5.0 | IA-32");
+            terminal.writeLine("ASH-M0.6.0 | IA-32");
         },
 
         .echo => {

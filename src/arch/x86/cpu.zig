@@ -62,15 +62,10 @@ pub const SSEInitError = error{
 pub fn enableSSE() SSEInitError!void {
     const features = getCPUFeatures();
 
-    // Comprobar capacidades antes de habilitar SSE.
     if (!features.fxsr or !features.sse or !features.sse2) {
         return error.UnsupportedCPU;
     }
 
-    // CR0:
-    // MP = 1: Monitor Coprocessor.
-    // EM = 0: Desactivar emulación FPU.
-    // TS = 0: No hay cambio de tarea pendiente.
     var cr0 = readCR0();
 
     cr0 |= (@as(u32, 1) << 1);
@@ -82,9 +77,6 @@ pub fn enableSSE() SSEInitError!void {
         : [value] "r" (cr0),
         : .{ .memory = true });
 
-    // CR4:
-    // OSFXSR = 1: Habilitar SSE y FXSAVE/FXRSTOR.
-    // OSXMMEXCPT = 1: Habilitar excepciones SIMD.
     var cr4 = readCR4();
 
     cr4 |= (@as(u32, 1) << 9);
@@ -95,6 +87,5 @@ pub fn enableSSE() SSEInitError!void {
         : [value] "r" (cr4),
         : .{ .memory = true });
 
-    // Inicializar el estado de la FPU.
     asm volatile ("fninit");
 }

@@ -36,68 +36,49 @@ IRQ_STUB 15
 irq_common:
     cld
 
-    # 1. Guardar registros generales y segmentos.
     pusha
     pushl %ds
     pushl %es
     pushl %fs
     pushl %gs
 
-    # 2. Obtener número de IRQ.
-    # 16 bytes segmentos + 32 bytes PUSHA.
     movl 48(%esp), %eax
 
-    # 3. Guardar ESP original en EBX.
-    # EBX es callee-saved en la ABI i386 C.
     movl %esp, %ebx
 
-    # 4. Activar segmentos de datos del kernel.
     movw $0x10, %dx
     movw %dx, %ds
     movw %dx, %es
     movw %dx, %fs
     movw %dx, %gs
 
-    # 5. Alinear la pila a 16 bytes.
     andl $-16, %esp
 
-    # 6. Reservar 512 bytes para FPU/SSE.
     subl $512, %esp
 
-    # Guardar el estado extendido.
     fxsave (%esp)
 
-    # 7. Reservar espacio para llamada C.
     subl $16, %esp
 
-    # Primer argumento: número de IRQ.
     movl %eax, 0(%esp)
 
-    # Llamar al manejador Zig.
     call ash_irq_handler
 
-    # 8. Recuperar área FXSAVE.
     addl $16, %esp
 
-    # Restaurar estado FPU/SSE.
     fxrstor (%esp)
 
-    # 9. Restaurar ESP original.
     movl %ebx, %esp
 
-    # 10. Restaurar segmentos.
     popl %gs
     popl %fs
     popl %es
     popl %ds
 
-    # Restaurar registros generales.
     popa
 
-    # Retirar número de IRQ.
     addl $4, %esp
 
-    # Regresar al contexto interrumpido.
     iret
 
 .size irq_common, .-irq_common

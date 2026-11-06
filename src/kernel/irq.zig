@@ -1,7 +1,5 @@
 const pic = @import("../arch/x86/pic.zig");
-const queue_module = @import("../drivers/input/scancode_queue.zig");
-
-var scancode_queue: queue_module.ScancodeQueue = .{};
+const ps2 = @import("../drivers/ps2.zig");
 
 var tick_count: u64 = 0;
 var keyboard_irq_count: u32 = 0;
@@ -14,11 +12,12 @@ pub export fn ash_irq_handler(irq: u32) callconv(.c) void {
         },
         1 => {
             keyboard_irq_count +%= 1;
-            const scancode = @import("../drivers/ps2.zig").readIrqScancode() orelse return;
-            _ = scancode_queue.enqueue(scancode);
-            pic.sendEOI(1);
+            ps2.handleIrq();
         },
         else => {},
+    }
+    if (irq < 16) {
+        pic.sendEOI(@intCast(irq));
     }
 }
 

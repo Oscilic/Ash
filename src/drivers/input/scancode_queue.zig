@@ -18,7 +18,7 @@ pub const ScancodeQueue = struct {
             return null;
         }
         const scancode = self.buffer[self.tail];
-        self.tail = (self.tail + 1) % self.buffer.len;
+        self.tail = (self.tail + 1) & (self.buffer.len - 1);
         return scancode;
     }
 };
