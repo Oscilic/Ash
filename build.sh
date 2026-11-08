@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-
-# ============================================================
-# ASH OPERATING SYSTEM
-# Build Script - IA-32 / Multiboot2
-# ============================================================
-
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 SRC_DIR="$ROOT_DIR/src"
@@ -31,19 +25,11 @@ echo " Target: IA-32"
 echo " Boot: Multiboot2 / GRUB2"
 echo "========================================"
 
-# ------------------------------------------------------------
-# 1. Prepare directories
-# ------------------------------------------------------------
-
 echo "[1/6] Preparing directories..."
 
 mkdir -p "$OBJ_DIR"
 mkdir -p "$BIN_DIR"
 mkdir -p "$ISO_DIR/boot/grub"
-
-# ------------------------------------------------------------
-# 2. Assemble boot.s
-# ------------------------------------------------------------
 
 echo "[2/6] Assembling boot.s..."
 
@@ -57,9 +43,6 @@ as --32 \
     src/arch/x86/irq.s \
     -o build/obj/irq.o
 as --32 src/arch/x86/gdt.s -o build/obj/gdt.o
-# ------------------------------------------------------------
-# 3. Compile Zig kernel
-# ------------------------------------------------------------
 
 echo "[3/6] Compiling Zig kernel..."
 
@@ -69,10 +52,6 @@ zig build-obj \
     -O ReleaseFast \
     -fno-stack-check \
     -femit-bin="$OBJ_DIR/kernel.o"
-
-# ------------------------------------------------------------
-# 4. Link kernel
-# ------------------------------------------------------------
 
 echo "[4/6] Linking kernel..."
 
@@ -86,10 +65,6 @@ ld -m elf_i386 \
     build/obj/irq.o \
     build/obj/gdt.o
 
-# ------------------------------------------------------------
-# 5. Validate Multiboot2
-# ------------------------------------------------------------
-
 echo "[5/6] Validating Multiboot2..."
 
 if ! grub2-file --is-x86-multiboot2 "$KERNEL_ELF"; then
@@ -98,10 +73,6 @@ if ! grub2-file --is-x86-multiboot2 "$KERNEL_ELF"; then
 fi
 
 echo "[OK] Multiboot2 header validated."
-
-# ------------------------------------------------------------
-# 6. Generate ISO
-# ------------------------------------------------------------
 
 echo "[6/6] Generating ISO..."
 
@@ -112,7 +83,6 @@ grub2-mkrescue \
     -o "$ASH_ISO" \
     "$ISO_DIR"
 
-echo
 echo "========================================"
 echo " ASH Build Successful!"
 echo "========================================"
