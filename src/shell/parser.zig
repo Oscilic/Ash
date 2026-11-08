@@ -7,8 +7,6 @@ pub const ParsedCommand = struct {
 
 pub fn parse(input: []const u8) ParsedCommand {
     var start: usize = 0;
-
-    // Ignorar espacios iniciales.
     while (start < input.len and input[start] == ' ') {
         start += 1;
     }
@@ -20,7 +18,6 @@ pub fn parse(input: []const u8) ParsedCommand {
         };
     }
 
-    // ASH-BUG-001: prueba de indexOfScalar.
     const remaining = input[start..];
 
     const relative_end = std.mem.indexOfScalar(
@@ -31,7 +28,6 @@ pub fn parse(input: []const u8) ParsedCommand {
 
     const end = start + relative_end;
 
-    // Ignorar espacios entre comando y argumentos.
     var args_start = end;
 
     while (args_start < input.len and input[args_start] == ' ') {

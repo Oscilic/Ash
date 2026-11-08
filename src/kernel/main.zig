@@ -6,11 +6,17 @@ const pic = @import("../arch/x86/pic.zig");
 const pit = @import("../arch/x86/pit.zig");
 const gdt = @import("../arch/x86/gdt.zig");
 const cpu = @import("../arch/x86/cpu.zig");
+const physical = @import("../memory/physical.zig");
+const multiboot2 = @import("../boot/multiboot2.zig");
+const bitmap = @import("../memory/bitmap.zig");
+const std = @import("std");
 
 const scancode_queue = @import("../drivers/input/scancode_queue.zig");
 const ps2 = @import("../drivers/ps2.zig");
 
 const MULTIBOOT2_MAGIC: u32 = 0x36D76289;
+
+pub var boot_info_address: u32 = 0;
 
 fn halt() noreturn {
     while (true) {
@@ -22,8 +28,6 @@ pub export fn kernel_main(
     magic: u32,
     multiboot_info: u32,
 ) callconv(.c) noreturn {
-    _ = multiboot_info;
-
     var terminal = terminal_module.Terminal{};
     terminal.init();
 
@@ -32,7 +36,68 @@ pub export fn kernel_main(
         terminal.writeLine("ASH: Invalid Multiboot2 magic!");
         halt();
     }
+    const bool_size = multiboot2.infoSize(
+        multiboot_info,
+    ) orelse {
+        terminal.setColor(.light_red, .black);
+        terminal.writeLine("ASH: Invalid Multiboot2 information!");
+        halt();
+    };
+    physical.reserveBootRegions(
+        &physical.reservations,
+        multiboot_info,
+        bool_size,
+    ) catch {
+        terminal.setColor(.light_red, .black);
+        terminal.writeLine("ASH: Failed to reserve boot memory!");
+        halt();
+    };
 
+    var reserve_buffer: [96]u8 = undefined;
+
+    const reserve_message = std.fmt.bufPrint(
+        &reserve_buffer,
+        "ASH: {d} boot pages reserved.",
+        .{physical.reservations.countUniquePages()},
+    ) catch unreachable;
+
+    terminal.writeLine(reserve_message);
+
+    bitmap.initPhysicalBitmap();
+
+    const memory_map = multiboot2.findMemoryMap(multiboot_info) orelse unreachable;
+    bitmap.initializeFromMemoryMap(
+        memory_map,
+        &physical.reservations,
+    ) catch unreachable;
+    if (bitmap.physicalStats()) |stats| {
+        var stats_buffer: [128]u8 = undefined;
+
+        const stats_message = std.fmt.bufPrint(
+            &stats_buffer,
+            "ASH Memory: {d} free / {d} occupied pages",
+            .{
+                stats.free_pages,
+                stats.occupied_pages,
+            },
+        ) catch unreachable;
+
+        terminal.writeLine(stats_message);
+    }
+    var bitmap_buffer: [128]u8 = undefined;
+
+    const bitmap_message = std.fmt.bufPrint(
+        &bitmap_buffer,
+        "ASH Bitmap: 0x{X:0>8}, {d} bytes",
+        .{
+            bitmap.storageAddress(),
+            bitmap.storageSize(),
+        },
+    ) catch unreachable;
+
+    terminal.writeLine(bitmap_message);
+
+    boot_info_address = multiboot_info;
     splash.show(&terminal);
     terminal.writeLine("");
     //if (!scancode_queue.selfTest()) {

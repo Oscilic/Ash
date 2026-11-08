@@ -5,6 +5,9 @@ const resolver = @import("resolver.zig");
 const time = @import("../kernel/time.zig");
 const vga = @import("../drivers/vga.zig");
 const ps2 = @import("../drivers/ps2.zig");
+const multiboot2 = @import("../boot/multiboot2.zig");
+const kernel = @import("../kernel/main.zig");
+const physical = @import("../memory/physical.zig");
 
 pub fn execute(terminal: *Terminal, input: []const u8) void {
     const parsed = parser.parse(input);
@@ -27,11 +30,12 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
             terminal.writeLine("  uptime        Display system uptime");
             terminal.writeLine("  color (col)   Change terminal color");
             terminal.writeLine("  irqstat       Show IRQ statistics");
+            terminal.writeLine("  memmap        Show physical memory map");
         },
 
         .version => {
             terminal.writeLine("Ash Operating System");
-            terminal.writeLine("ASH-M0.6.0 | IA-32");
+            terminal.writeLine("ASH-M0.7.3-dev | IA-32");
         },
 
         .echo => {
@@ -156,6 +160,79 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
             ) catch unreachable;
 
             terminal.writeLine(message);
+        },
+        .memmap => {
+            const mmap = multiboot2.findMemoryMap(
+                kernel.boot_info_address,
+            ) orelse {
+                terminal.writeLine("Memory map unavailable.");
+                return;
+            };
+
+            terminal.writeLine("ASH Physical Memory Map");
+
+            var i: usize = 0;
+            while (i < mmap.entry_count) : (i += 1) {
+                const entry = mmap.entry(i) orelse break;
+
+                var buffer: [160]u8 = undefined;
+
+                const message = std.fmt.bufPrint(
+                    &buffer,
+                    "{d}: Base=0x{X:0>16} Size=0x{X:0>16} Type={d}",
+                    .{
+                        i,
+                        entry.base_addr,
+                        entry.length,
+                        entry.entry_type,
+                    },
+                ) catch unreachable;
+
+                terminal.writeLine(message);
+            }
+            const region = physical.kernelRegion();
+
+            var region_buffer: [160]u8 = undefined;
+
+            const region_message = std.fmt.bufPrint(
+                &region_buffer,
+                "Kernel: 0x{X:0>8} - 0x{X:0>8} ({d} pages)",
+                .{
+                    region.start,
+                    region.end,
+                    region.page_count,
+                },
+            ) catch unreachable;
+
+            terminal.writeLine(region_message);
+            const boot_size = multiboot2.infoSize(
+                kernel.boot_info_address,
+            ) orelse {
+                terminal.writeLine("Invalid Multiboot2 information.");
+                return;
+            };
+
+            const boot_pages = physical.pageRange(
+                @as(usize, kernel.boot_info_address),
+                @as(usize, boot_size),
+            ) orelse {
+                terminal.writeLine("Invalid Multiboot2 page range.");
+                return;
+            };
+
+            var boot_buffer: [160]u8 = undefined;
+
+            const boot_message = std.fmt.bufPrint(
+                &boot_buffer,
+                "Multiboot2: 0x{X:0>8}, {d} bytes, {d} pages",
+                .{
+                    kernel.boot_info_address,
+                    boot_size,
+                    boot_pages.count(),
+                },
+            ) catch unreachable;
+
+            terminal.writeLine(boot_message);
         },
     }
 }

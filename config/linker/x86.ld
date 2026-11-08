@@ -10,6 +10,7 @@ PHDRS
 SECTIONS
 {
     . = 0x00100000;
+    __kernel_start = .;
 
     .multiboot ALIGN(8) :
     {

@@ -39,23 +39,19 @@
         push %ebx
         push %eax
 
-        # Comprobar FXSR, SSE y SSE2.
         movl $1, %eax
         cpuid
 
-        # EDX bits 24, 25 y 26 deben estar activos.
         movl %edx, %ecx
         andl $0x07000000, %ecx
         cmpl $0x07000000, %ecx
         jne .Lno_sse
 
-        # Configurar CR0.
         movl %cr0, %eax
         orl $0x00000002, %eax
         andl $0xFFFFFFF3, %eax
         movl %eax, %cr0
 
-        # Configurar CR4.
         movl %cr4, %eax
         orl $0x00000600, %eax
         movl %eax, %cr4
