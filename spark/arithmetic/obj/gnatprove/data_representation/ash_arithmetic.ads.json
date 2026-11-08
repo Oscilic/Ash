@@ -1,0 +1,29 @@
+[
+{
+  "name": "Ash_Arithmetic.U64",
+  "location": "ash_arithmetic.ads:7:12",
+  "Size": 64,
+  "Alignment": 8
+}
+,
+{
+  "name": "Ash_Arithmetic.Division_Result",
+  "location": "ash_arithmetic.ads:9:9",
+  "Size": 128,
+  "Alignment": 8,
+  "record": [
+    {
+      "name": "Quotient",
+      "Position": 0,
+      "First_Bit": 0,
+      "Size": 64
+    },
+    {
+      "name": "Remainder",
+      "Position": 8,
+      "First_Bit": 0,
+      "Size": 64
+    }
+  ]
+}
+]

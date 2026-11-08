@@ -1,4 +1,6 @@
 pub const PAGE_SIZE: usize = 4096;
+pub const LOW_MEMORY_LIMIT: usize = 0x00100000;
+pub const LOW_MEMORY_PAGES: usize = LOW_MEMORY_LIMIT / PAGE_SIZE;
 
 extern const __kernel_start: u8;
 extern const __kernel_end: u8;

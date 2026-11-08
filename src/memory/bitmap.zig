@@ -1,6 +1,9 @@
 const physical = @import("physical.zig");
 const multiboot2 = @import("../boot/multiboot2.zig");
 
+var allocation_bitmap_storage: [BITMAP_BYTES]u8 = undefined;
+var allocation_bitmap: Bitmap = undefined;
+
 pub const Bitmap = struct {
     data: []u8,
     page_count: usize,
@@ -87,6 +90,67 @@ pub const Bitmap = struct {
     }
 };
 
+pub const PhysicalAllocator = struct {
+    availability: *Bitmap,
+    allocations: *Bitmap,
+
+    pub const Error = error{
+        InvalidPage,
+        NotAllocated,
+        InconsistentState,
+    };
+
+    pub fn allocate(self: *PhysicalAllocator) Error!?usize {
+        if (self.availability.page_count !=
+            self.allocations.page_count)
+        {
+            return error.InconsistentState;
+        }
+
+        for (0..self.availability.page_count) |page| {
+            if (self.availability.isOccupied(page)) continue;
+
+            if (self.allocations.isOccupied(page)) {
+                return error.InconsistentState;
+            }
+
+            self.availability.markOccupied(page) catch unreachable;
+            self.allocations.markOccupied(page) catch unreachable;
+
+            return page;
+        }
+
+        return null;
+    }
+
+    pub fn free(
+        self: *PhysicalAllocator,
+        page: usize,
+    ) Error!void {
+        if (self.availability.page_count !=
+            self.allocations.page_count)
+        {
+            return error.InconsistentState;
+        }
+
+        if (page >= self.availability.page_count) {
+            return error.InvalidPage;
+        }
+
+        // Solo liberamos páginas entregadas por esta API.
+        if (!self.allocations.isOccupied(page)) {
+            return error.NotAllocated;
+        }
+
+        if (!self.availability.isOccupied(page)) {
+            return error.InconsistentState;
+        }
+
+        self.allocations.markFree(page) catch unreachable;
+        self.availability.markFree(page) catch unreachable;
+    }
+};
+
 pub const MAX_PHYSICAL_PAGES: usize = 1_048_576;
 
 pub const BITMAP_BYTES: usize =
@@ -98,16 +162,31 @@ var physical_bitmap: Bitmap = undefined;
 var physical_bitmap_initialized: bool = false;
 
 pub fn initPhysicalBitmap() void {
+    physical_bitmap_initialized = false;
+
     physical_bitmap = Bitmap.init(
         physical_bitmap_storage[0..],
         MAX_PHYSICAL_PAGES,
     ) catch unreachable;
+
+    allocation_bitmap = Bitmap.init(
+        allocation_bitmap_storage[0..],
+        MAX_PHYSICAL_PAGES,
+    ) catch unreachable;
+
+    @memset(allocation_bitmap_storage[0..], 0);
 
     physical_bitmap_initialized = true;
 }
 
 pub fn isPhysicalBitmapInitialized() bool {
     return physical_bitmap_initialized;
+}
+pub fn isPhysicalPageAllocated(page: usize) bool {
+    if (!physical_bitmap_initialized) return false;
+    if (page >= allocation_bitmap.page_count) return false;
+
+    return allocation_bitmap.isOccupied(page);
 }
 
 pub fn storageAddress() usize {
@@ -209,9 +288,40 @@ pub fn initializeFromMemoryMap(
             physical_bitmap.markOccupied(page) catch unreachable;
         }
     }
-
-    physical_bitmap.markOccupied(0) catch unreachable;
+    reserveLowMemory(&physical_bitmap);
 }
+
+pub const PhysicalPageError =
+    PhysicalAllocator.Error || error{BitmapNotInitialized};
+
+pub fn allocatePhysicalPage() PhysicalPageError!?usize {
+    if (!physical_bitmap_initialized) {
+        return error.BitmapNotInitialized;
+    }
+
+    var allocator = PhysicalAllocator{
+        .availability = &physical_bitmap,
+        .allocations = &allocation_bitmap,
+    };
+
+    return allocator.allocate();
+}
+
+pub fn freePhysicalPage(
+    page: usize,
+) PhysicalPageError!void {
+    if (!physical_bitmap_initialized) {
+        return error.BitmapNotInitialized;
+    }
+
+    var allocator = PhysicalAllocator{
+        .availability = &physical_bitmap,
+        .allocations = &allocation_bitmap,
+    };
+
+    try allocator.free(page);
+} //Retocar a futuro, encapsular en un struct y no exponer el bitmap de asignaciones, para que no se pueda modificar desde fuera del módulo.
+
 pub const BitmapStats = struct {
     total_pages: usize,
     free_pages: usize,
@@ -234,6 +344,18 @@ pub fn physicalStats() ?BitmapStats {
         .free_pages = free,
         .occupied_pages = physical_bitmap.page_count - free,
     };
+}
+pub fn reserveLowMemory(
+    target: *Bitmap,
+) void {
+    const limit = @min(
+        physical.LOW_MEMORY_PAGES,
+        target.page_count,
+    );
+
+    for (0..limit) |page| {
+        target.markOccupied(page) catch unreachable;
+    }
 }
 //pruebas
 test "bitmap starts fully occupied" {
@@ -329,4 +451,152 @@ test "bitmap statistics count free and occupied pages" {
         @as(usize, 14),
         test_bitmap.page_count - free,
     );
+}
+test "physical allocator initializes both bitmaps safely" {
+    const std = @import("std");
+
+    initPhysicalBitmap();
+
+    try std.testing.expect(isPhysicalBitmapInitialized());
+
+    const sample_pages = [_]usize{
+        0,
+        1,
+        256,
+        65535,
+        MAX_PHYSICAL_PAGES - 1,
+    };
+
+    for (sample_pages) |page| {
+        // Todas las páginas comienzan ocupadas.
+        try std.testing.expect(
+            physical_bitmap.isOccupied(page),
+        );
+
+        // Ninguna página ha sido asignada por la API.
+        try std.testing.expect(
+            !isPhysicalPageAllocated(page),
+        );
+    }
+
+    // Los índices fuera del espacio físico no son válidos.
+    try std.testing.expect(
+        !isPhysicalPageAllocated(MAX_PHYSICAL_PAGES),
+    );
+}
+
+test "physical allocator allocates and frees pages" {
+    const std = @import("std");
+
+    var available_storage: [2]u8 = undefined;
+    var allocated_storage: [2]u8 = undefined;
+
+    var availability = try Bitmap.init(&available_storage, 16);
+    var allocations = try Bitmap.init(&allocated_storage, 16);
+
+    @memset(allocated_storage[0..], 0);
+
+    try availability.markFree(3);
+    try availability.markFree(7);
+
+    var allocator = PhysicalAllocator{
+        .availability = &availability,
+        .allocations = &allocations,
+    };
+
+    const first = (try allocator.allocate()).?;
+    try std.testing.expectEqual(@as(usize, 3), first);
+
+    try std.testing.expect(availability.isOccupied(3));
+    try std.testing.expect(allocations.isOccupied(3));
+
+    const second = (try allocator.allocate()).?;
+    try std.testing.expectEqual(@as(usize, 7), second);
+
+    try allocator.free(first);
+
+    try std.testing.expect(!availability.isOccupied(3));
+    try std.testing.expect(!allocations.isOccupied(3));
+
+    const reused = (try allocator.allocate()).?;
+    try std.testing.expectEqual(first, reused);
+}
+
+test "physical allocator rejects freeing reserved pages" {
+    const std = @import("std");
+
+    var available_storage: [1]u8 = undefined;
+    var allocated_storage: [1]u8 = undefined;
+
+    var availability = try Bitmap.init(&available_storage, 8);
+    var allocations = try Bitmap.init(&allocated_storage, 8);
+
+    @memset(allocated_storage[0..], 0);
+
+    var allocator = PhysicalAllocator{
+        .availability = &availability,
+        .allocations = &allocations,
+    };
+
+    try std.testing.expectError(
+        error.NotAllocated,
+        allocator.free(0),
+    );
+
+    try std.testing.expectError(
+        error.NotAllocated,
+        allocator.free(3),
+    );
+
+    try std.testing.expectError(
+        error.InvalidPage,
+        allocator.free(8),
+    );
+}
+
+test "physical allocator rejects double free" {
+    const std = @import("std");
+
+    var available_storage: [1]u8 = undefined;
+    var allocated_storage: [1]u8 = undefined;
+
+    var availability = try Bitmap.init(&available_storage, 8);
+    var allocations = try Bitmap.init(&allocated_storage, 8);
+
+    @memset(allocated_storage[0..], 0);
+
+    try availability.markFree(2);
+
+    var allocator = PhysicalAllocator{
+        .availability = &availability,
+        .allocations = &allocations,
+    };
+
+    const page = (try allocator.allocate()).?;
+    try allocator.free(page);
+
+    try std.testing.expectError(
+        error.NotAllocated,
+        allocator.free(page),
+    );
+}
+test "low memory remains reserved" {
+    const std = @import("std");
+
+    var storage: [64]u8 = undefined;
+    var target = try Bitmap.init(&storage, 512);
+
+    for (0..512) |page| {
+        try target.markFree(page);
+    }
+
+    reserveLowMemory(&target);
+
+    for (0..physical.LOW_MEMORY_PAGES) |page| {
+        try std.testing.expect(target.isOccupied(page));
+    }
+
+    for (physical.LOW_MEMORY_PAGES..512) |page| {
+        try std.testing.expect(!target.isOccupied(page));
+    }
 }

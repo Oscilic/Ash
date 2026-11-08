@@ -53,49 +53,102 @@ pub export fn kernel_main(
         halt();
     };
 
-    var reserve_buffer: [96]u8 = undefined;
-
-    const reserve_message = std.fmt.bufPrint(
-        &reserve_buffer,
-        "ASH: {d} boot pages reserved.",
-        .{physical.reservations.countUniquePages()},
-    ) catch unreachable;
-
-    terminal.writeLine(reserve_message);
+    //    var reserve_buffer: [96]u8 = undefined;
+    //
+    //    const reserve_message = std.fmt.bufPrint(
+    //        &reserve_buffer,
+    //        "ASH: {d} boot pages reserved.",
+    //        .{physical.reservations.countUniquePages()},
+    //    ) catch unreachable;
+    //
+    //    terminal.writeLine(reserve_message);
 
     bitmap.initPhysicalBitmap();
 
-    const memory_map = multiboot2.findMemoryMap(multiboot_info) orelse unreachable;
-    bitmap.initializeFromMemoryMap(
-        memory_map,
-        &physical.reservations,
-    ) catch unreachable;
-    if (bitmap.physicalStats()) |stats| {
-        var stats_buffer: [128]u8 = undefined;
-
-        const stats_message = std.fmt.bufPrint(
-            &stats_buffer,
-            "ASH Memory: {d} free / {d} occupied pages",
-            .{
-                stats.free_pages,
-                stats.occupied_pages,
-            },
-        ) catch unreachable;
-
-        terminal.writeLine(stats_message);
-    }
-    var bitmap_buffer: [128]u8 = undefined;
-
-    const bitmap_message = std.fmt.bufPrint(
-        &bitmap_buffer,
-        "ASH Bitmap: 0x{X:0>8}, {d} bytes",
-        .{
-            bitmap.storageAddress(),
-            bitmap.storageSize(),
-        },
-    ) catch unreachable;
-
-    terminal.writeLine(bitmap_message);
+    //    const memory_map = multiboot2.findMemoryMap(multiboot_info) orelse unreachable;
+    //    bitmap.initializeFromMemoryMap(
+    //        memory_map,
+    //        &physical.reservations,
+    //    ) catch unreachable;
+    //    if (bitmap.physicalStats()) |stats| {
+    //        var stats_buffer: [128]u8 = undefined;
+    //
+    //        const stats_message = std.fmt.bufPrint(
+    //            &stats_buffer,
+    //            "ASH Memory: {d} free / {d} occupied pages",
+    //            .{
+    //                stats.free_pages,
+    //                stats.occupied_pages,
+    //            },
+    //        ) catch unreachable;
+    //
+    //        terminal.writeLine(stats_message);
+    //    }
+    //
+    //    const test_page = (bitmap.allocatePhysicalPage() catch unreachable) orelse unreachable;
+    //
+    //    var page_buffer: [128]u8 = undefined;
+    //
+    //    const page_message = std.fmt.bufPrint(
+    //        &page_buffer,
+    //        "ASH: Allocated physical page {d} (0x{X:0>8})",
+    //        .{
+    //            test_page,
+    //            test_page * physical.PAGE_SIZE,
+    //        },
+    //    ) catch unreachable;
+    //
+    //    terminal.writeLine(page_message);
+    //
+    //    bitmap.freePhysicalPage(test_page) catch unreachable;
+    //    terminal.writeLine("ASH: Physical page released successfully.");
+    //
+    //    const kernel_first_page = physical.kernelRegion().first_page;
+    //
+    //    if (bitmap.freePhysicalPage(kernel_first_page)) |_| {
+    //        terminal.writeLine(
+    //            "ASH ERROR: Kernel page was incorrectly released!",
+    //        );
+    //    } else |err| {
+    //        if (err == error.NotAllocated) {
+    //            terminal.writeLine(
+    //                "ASH: Kernel page release correctly rejected.",
+    //            );
+    //        } else {
+    //            terminal.writeLine(
+    //                "ASH ERROR: Unexpected memory error.",
+    //            );
+    //        }
+    //    }
+    //
+    //    if (bitmap.freePhysicalPage(1)) |_| {
+    //        terminal.writeLine(
+    //            "ASH ERROR: Low memory page was released!",
+    //        );
+    //    } else |err| {
+    //        if (err == error.NotAllocated) {
+    //            terminal.writeLine(
+    //                "ASH: Low memory release correctly rejected.",
+    //            );
+    //        } else {
+    //            terminal.writeLine(
+    //                "ASH ERROR: Unexpected memory error.",
+    //            );
+    //        }
+    //    }
+    //
+    //    var bitmap_buffer: [128]u8 = undefined;
+    //
+    //    const bitmap_message = std.fmt.bufPrint(
+    //        &bitmap_buffer,
+    //        "ASH Bitmap: 0x{X:0>8}, {d} bytes",
+    //        .{
+    //            bitmap.storageAddress(),
+    //            bitmap.storageSize(),
+    //        },
+    //    ) catch unreachable;
+    //
+    //    terminal.writeLine(bitmap_message);
 
     boot_info_address = multiboot_info;
     splash.show(&terminal);

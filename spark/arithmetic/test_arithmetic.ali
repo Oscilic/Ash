@@ -1,0 +1,75 @@
+V "GNAT Lib v16"
+M P W=b
+A -gnat2022
+A -gnata
+P ZX
+
+RN
+RV NO_EXCEPTIONS
+RV NO_IO
+RV NO_STANDARD_STORAGE_POOLS
+
+U test_arithmetic%b	test_arithmetic.adb	21aea03e NE OO SU
+W ada%s			ada.ads			ada.ali
+Z ada.exceptions%s	a-except.adb		a-except.ali
+Z ada.strings.text_buffers%s  a-sttebu.adb	a-sttebu.ali
+W ada.text_io%s		a-textio.adb		a-textio.ali
+W ash_arithmetic%s	ash_arithmetic.adb	ash_arithmetic.ali
+W interfaces%s		interfac.ads		interfac.ali
+
+D ada.ads		20260819000000 76789da1 ada%s
+D a-except.ads		20260819000000 8699d7ff ada.exceptions%s
+D a-ioexce.ads		20260819000000 40018c65 ada.io_exceptions%s
+D a-stream.ads		20260819000000 cb01a8f8 ada.streams%s
+D a-string.ads		20260819000000 90ac6797 ada.strings%s
+D a-sttebu.ads		20260819000000 f1ad67a2 ada.strings.text_buffers%s
+D a-stuten.ads		20260819000000 c6ced0ae ada.strings.utf_encoding%s
+D a-tags.ads		20260819000000 2dbf449c ada.tags%s
+D a-textio.ads		20260819000000 34ef47de ada.text_io%s
+D a-unccon.ads		20260819000000 0e9b276f ada.unchecked_conversion%s
+D ash_arithmetic.ads	20261108144827 cde75381 ash_arithmetic%s
+D interfac.ads		20260819000000 9111f9c1 interfaces%s
+D i-cstrea.ads		20260819000000 ffd01b9d interfaces.c_streams%s
+D system.ads		20260819000000 e2b7c99d system%s
+D s-crtl.ads		20260819000000 823b6536 system.crtl%s
+D s-exctab.ads		20260819000000 91bef6ef system.exception_table%s
+D s-ficobl.ads		20260819000000 dc5161d4 system.file_control_block%s
+D s-parame.ads		20260819000000 a1aeab5c system.parameters%s
+D s-putima.ads		20260819000000 1b989439 system.put_images%s
+D s-secsta.ads		20260819000000 578279f5 system.secondary_stack%s
+D s-soflin.ads		20260819000000 5d88fdea system.soft_links%s
+D s-stache.ads		20260819000000 0b81c1fe system.stack_checking%s
+D s-stalib.ads		20260819000000 1c9580f6 system.standard_library%s
+D s-stoele.ads		20260819000000 ccded4e8 system.storage_elements%s
+D s-traent.ads		20260819000000 c81cbf8c system.traceback_entries%s
+D s-unstyp.ads		20260819000000 fa2a7f59 system.unsigned_types%s
+D s-wchcon.ads		20260819000000 d9032363 system.wch_con%s
+D test_arithmetic.adb	20261108145748 49b74da0 test_arithmetic%b
+G a e
+G c Z b b [test_arithmetic standard 5 11 none]
+G r c none [test_arithmetic standard 5 11 none] [divide_unsigned ash_arithmetic 14 13 none]
+X 1 ada.ads
+18K9*Ada 22e8 28|1r6 22r7 33r4
+X 9 a-textio.ads
+58K13*Text_IO 785e16 28|1w10 22r11 33r8
+565U14*Put_Line 28|22s19 33s16
+X 11 ash_arithmetic.ads
+4K9*Ash_Arithmetic 22e19 28|3w6 13r25 14r9
+9R9*Division_Result 12e14 28|13r40
+10m7*Quotient{7M12} 28|16r17
+11m7*Remainder{7M12} 28|17r24
+14V13*Divide_Unsigned{9R9} 28|14s24
+X 12 interfac.ads
+47K9*Interfaces 247e15 28|2w6 6r13 8r19
+95M9*Unsigned_64 28|6r24 8r30
+X 28 test_arithmetic.adb
+5U11*Test_Arithmetic 5b11 34l5 34t20
+8M12 U64{12|95M9} 11r38 29r11 30r11 31r11
+10U14 Check 10b14 11>7 11>10 11>13 11>25 23l8 23t13 26s4 27s4 28s4 29s4 30s4
+. 31s4
+11m7 N{8M12} 14r41
+11m10 D{8M12} 14r44
+11m13 Expected_Q{8M12} 16r29
+11m25 Expected_R{8M12} 17r37
+13r7 Result{11|9R9} 16r10 17r17
+

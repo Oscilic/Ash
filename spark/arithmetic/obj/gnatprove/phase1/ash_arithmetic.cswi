@@ -1,0 +1,9 @@
+20261108172547
+-c
+-x
+ada
+-gnatA
+-gnat2022
+-gnatc
+-gnates=/mnt/ash-dev/ash/spark/arithmetic/obj/gnatprove/67687b2d.tmp
+-gnatis

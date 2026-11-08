@@ -1,0 +1,29 @@
+V "GNAT Lib v16"
+A -gnatA
+A -gnat2022
+A -gnatR2js
+A -gnatws
+A -gnatx
+A -gnatis
+A -mtune=generic
+A -march=x86-64
+P ZX
+
+RN
+RV NO_IMPLEMENTATION_ASPECT_SPECIFICATIONS
+RV NO_IMPLEMENTATION_PRAGMAS
+
+U ash_arithmetic%b	ash_arithmetic.adb	39a73e40 NE OO PK
+W interfaces%s		interfac.ads		interfac.ali
+
+U ash_arithmetic%s	ash_arithmetic.ads	5cf6aa40 EE NE OO PK
+W interfaces%s		interfac.ads		interfac.ali
+
+D ash_arithmetic.ads	20261108144827 cde75381 ash_arithmetic%s
+D ash_arithmetic.adb	20261108155652 65519400 ash_arithmetic%b
+D interfac.ads		20260430083320 9111f9c1 interfaces%s
+D system.ads		20260430083320 e2b7c99d system%s
+G a e
+G c Z s b [divide_unsigned ash_arithmetic 14 13 none]
+G c Z s s [division_resultIP ash_arithmetic 9 9 none]
+

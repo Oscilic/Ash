@@ -1,0 +1,9 @@
+project Ash_Arithmetic is
+   for Source_Dirs use (".");
+   for Object_Dir use "obj";
+   for Languages use ("Ada");
+
+   package Compiler is
+      for Default_Switches ("Ada") use ("-gnat2022");
+   end Compiler;
+end Ash_Arithmetic;

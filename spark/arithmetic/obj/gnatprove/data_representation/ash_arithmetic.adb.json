@@ -1,0 +1,29 @@
+[
+{
+  "name": "Ash_Arithmetic.Divide_Unsigned.Quotient",
+  "location": "ash_arithmetic.adb:11:7",
+  "Size": 64,
+  "Alignment": 8
+}
+,
+{
+  "name": "Ash_Arithmetic.Divide_Unsigned.Remainder",
+  "location": "ash_arithmetic.adb:12:7",
+  "Size": 64,
+  "Alignment": 8
+}
+,
+{
+  "name": "Ash_Arithmetic.Divide_Unsigned.Bit_Value",
+  "location": "ash_arithmetic.adb:13:7",
+  "Size": 64,
+  "Alignment": 8
+}
+,
+{
+  "name": "Ash_Arithmetic.Divide_Unsigned.Carry",
+  "location": "ash_arithmetic.adb:14:7",
+  "Size": 8,
+  "Alignment": 1
+}
+]

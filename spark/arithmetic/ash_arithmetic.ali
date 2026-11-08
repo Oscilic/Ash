@@ -1,0 +1,49 @@
+V "GNAT Lib v16"
+A -gnat2022
+A -gnata
+P ZX
+
+RN
+RV NO_IMPLEMENTATION_ASPECT_SPECIFICATIONS
+
+U ash_arithmetic%b	ash_arithmetic.adb	0b9e7493 NE OO PK
+W interfaces%s		interfac.ads		interfac.ali
+Z system.assertions%s	s-assert.adb		s-assert.ali
+
+U ash_arithmetic%s	ash_arithmetic.ads	5cf6aa40 EE NE OO PK
+W interfaces%s		interfac.ads		interfac.ali
+
+D ada.ads		20260819000000 76789da1 ada%s
+D a-assert.ads		20260819000000 ba465f5c ada.assertions%s
+D a-unccon.ads		20260819000000 0e9b276f ada.unchecked_conversion%s
+D ash_arithmetic.ads	20261108144827 cde75381 ash_arithmetic%s
+D ash_arithmetic.adb	20261108144351 5768ded3 ash_arithmetic%b
+D interfac.ads		20260819000000 9111f9c1 interfaces%s
+D system.ads		20260819000000 e2b7c99d system%s
+D s-assert.ads		20260819000000 9c4520c7 system.assertions%s
+D s-exctab.ads		20260819000000 91bef6ef system.exception_table%s
+D s-stalib.ads		20260819000000 1c9580f6 system.standard_library%s
+G a e
+G c Z s b [divide_unsigned ash_arithmetic 14 13 none]
+G c Z s s [division_resultIP ash_arithmetic 9 9 none]
+X 4 ash_arithmetic.ads
+4K9*Ash_Arithmetic 22l5 22e19 5|4b14 39l5 39t19
+7M12*U64{6|95M9} 10r19 11r19 15r21 16r21 5|8r21 9r21 11r19 12r19 13r19 30r50
+9R9*Division_Result 12e14 16r33 5|9r33
+10m7*Quotient{7M12} 5|35m10
+11m7*Remainder{7M12} 20r32 5|36m10
+14V13*Divide_Unsigned{9R9} 15>7 16>7 20r9 5|7b13
+15m7 Numerator{7M12} 5|8b7 18r36
+16m7 Denominator{7M12} 18r14 20r44 5|9b7 26r40 27r38
+X 5 ash_arithmetic.adb
+11m7 Quotient{4|7M12} 29m13 30r15 35r23
+12m7 Remainder{4|7M12} 21r36 23m10 24r35 26r27 27m13 27r26 36r23
+13m7 Bit_Value{4|7M12} 17m10 24r52
+14b7 Carry{boolean} 20m10 26r13
+16i11 I{integer} 18r47 30r59
+X 6 interfac.ads
+47K9*Interfaces 4|1w6 2r10 7r19 5|1w6 2r10 18r12 21r12 24r12 30r27 6|247e15
+95M9*Unsigned_64 4|2r21 7r30 5|2r21
+179V13*Shift_Left{95M9} 5|24s23 30s38
+184V13*Shift_Right{95M9} 5|18s23 21s23
+
