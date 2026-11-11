@@ -2,8 +2,9 @@ with Interfaces;
 use type Interfaces.Unsigned_64;
 
 package Ash_Arithmetic
-  with SPARK_Mode
+   with SPARK_Mode
 is
+
    subtype U64 is Interfaces.Unsigned_64;
 
    type Division_Result is record
@@ -12,11 +13,11 @@ is
    end record;
 
    function Divide_Unsigned
-     (Numerator   : U64;
-      Denominator : U64) return Division_Result
+      (Numerator : U64; Denominator : U64) return Division_Result
    with
-      Pre => Denominator /= 0,
+      Pre  => Denominator /= 0,
       Post =>
-        Divide_Unsigned'Result.Remainder < Denominator;
+         Divide_Unsigned'Result.Quotient = Numerator / Denominator
+         and then Divide_Unsigned'Result.Remainder = Numerator rem Denominator;
 
 end Ash_Arithmetic;

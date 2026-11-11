@@ -1,49 +1,89 @@
 V "GNAT Lib v16"
 A -gnat2022
-A -gnata
-P ZX
+P SS ZX
 
 RN
 RV NO_IMPLEMENTATION_ASPECT_SPECIFICATIONS
+RV NO_IMPLEMENTATION_PRAGMAS
 
-U ash_arithmetic%b	ash_arithmetic.adb	0b9e7493 NE OO PK
+U ash_arithmetic%b	ash_arithmetic.adb	08ba96e9 NE OO PK
+Z ada.strings.text_buffers%s  a-sttebu.adb	a-sttebu.ali
 W interfaces%s		interfac.ads		interfac.ali
-Z system.assertions%s	s-assert.adb		s-assert.ali
 
-U ash_arithmetic%s	ash_arithmetic.ads	5cf6aa40 EE NE OO PK
+U ash_arithmetic%s	ash_arithmetic.ads	b3c1cced EE NE OO PK
 W interfaces%s		interfac.ads		interfac.ali
+W spark%s		spark.ads		spark.ali
+W spark.big_integers%s	spark-big_integers.ads	spark-big_integers.ali
 
 D ada.ads		20260819000000 76789da1 ada%s
 D a-assert.ads		20260819000000 ba465f5c ada.assertions%s
+D a-except.ads		20260819000000 8699d7ff ada.exceptions%s
+D a-finali.ads		20260819000000 099c16e4 ada.finalization%s
+D a-numeri.ads		20260819000000 84bea7a3 ada.numerics%s
+D a-nubinu.ads		20260819000000 93f1f3d1 ada.numerics.big_numbers%s
+D a-nbnbin.ads		20260819000000 b754d391 ada.numerics.big_numbers.big_integers%s
+D a-stream.ads		20260819000000 cb01a8f8 ada.streams%s
+D a-string.ads		20260819000000 90ac6797 ada.strings%s
+D a-sttebu.ads		20260819000000 f1ad67a2 ada.strings.text_buffers%s
+D a-stuten.ads		20260819000000 c6ced0ae ada.strings.utf_encoding%s
+D a-tags.ads		20260819000000 2dbf449c ada.tags%s
 D a-unccon.ads		20260819000000 0e9b276f ada.unchecked_conversion%s
-D ash_arithmetic.ads	20261108144827 cde75381 ash_arithmetic%s
-D ash_arithmetic.adb	20261108144351 5768ded3 ash_arithmetic%b
+D ash_arithmetic.ads	20261109011009 fcfafb28 ash_arithmetic%s
+D ash_arithmetic.adb	20261108155652 65519400 ash_arithmetic%b
 D interfac.ads		20260819000000 9111f9c1 interfaces%s
+D i-c.ads		20260819000000 dbdd3be7 interfaces.c%s
+D spark.ads		20260526082558 05bc62fb spark%s
+D spark-big_integers.ads  20260526082558 de2ace04 spark.big_integers%s
 D system.ads		20260819000000 e2b7c99d system%s
 D s-assert.ads		20260819000000 9c4520c7 system.assertions%s
 D s-exctab.ads		20260819000000 91bef6ef system.exception_table%s
+D s-finpri.ads		20260819000000 5970d55a system.finalization_primitives%s
+D s-finroo.ads		20260819000000 0a7c3ed4 system.finalization_root%s
+D s-oscons.ads		20260819000000 dd4b88bd system.os_constants%s
+D s-oslock.ads		20260819000000 13fa6b78 system.os_locks%s
+D s-parame.ads		20260819000000 a1aeab5c system.parameters%s
+D s-putima.ads		20260819000000 1b989439 system.put_images%s
+D s-retsta.ads		20260819000000 0f6b06cb system.return_stack%s
+D s-secsta.ads		20260819000000 578279f5 system.secondary_stack%s
+D s-soflin.ads		20260819000000 5d88fdea system.soft_links%s
+D s-stache.ads		20260819000000 0b81c1fe system.stack_checking%s
 D s-stalib.ads		20260819000000 1c9580f6 system.standard_library%s
+D s-stoele.ads		20260819000000 ccded4e8 system.storage_elements%s
+D s-stratt.ads		20260819000000 80b8dafb system.stream_attributes%s
+D s-traent.ads		20260819000000 c81cbf8c system.traceback_entries%s
+D s-unstyp.ads		20260819000000 fa2a7f59 system.unsigned_types%s
 G a e
-G c Z s b [divide_unsigned ash_arithmetic 14 13 none]
-G c Z s s [division_resultIP ash_arithmetic 9 9 none]
-X 4 ash_arithmetic.ads
-4K9*Ash_Arithmetic 22l5 22e19 5|4b14 39l5 39t19
-7M12*U64{6|95M9} 10r19 11r19 15r21 16r21 5|8r21 9r21 11r19 12r19 13r19 30r50
-9R9*Division_Result 12e14 16r33 5|9r33
-10m7*Quotient{7M12} 5|35m10
-11m7*Remainder{7M12} 20r32 5|36m10
-14V13*Divide_Unsigned{9R9} 15>7 16>7 20r9 5|7b13
-15m7 Numerator{7M12} 5|8b7 18r36
-16m7 Denominator{7M12} 18r14 20r44 5|9b7 26r40 27r38
-X 5 ash_arithmetic.adb
-11m7 Quotient{4|7M12} 29m13 30r15 35r23
-12m7 Remainder{4|7M12} 21r36 23m10 24r35 26r27 27m13 27r26 36r23
-13m7 Bit_Value{4|7M12} 17m10 24r52
+G c Z s b [divide_unsigned ash_arithmetic 17 13 none]
+G c Z s s [division_resultIP ash_arithmetic 12 9 none]
+X 7 a-nbnbin.ads
+26R9*Big_Integer 180e14 14|5r29
+39V14*"="{boolean} 14|25s10
+49V13*To_Big_Integer{35R12} 14|24s29 25s31 27s33 28s33
+135V14*"+"{35R12} 14|28s12
+141V14*"*"{35R12} 14|27s12
+X 14 ash_arithmetic.ads
+7K9*Ash_Arithmetic 31l5 31e19 15|4b14 39l5 39t19
+10M12*U64{16|95M9} 13r19 14r19 18r19 18r38 15|8r21 9r21 11r19 12r19 13r19
+. 30r50
+12R9*Division_Result 15e14 18r50 15|9r33
+13m7*Quotient{10M12} 26r47 15|35m10
+14m7*Remainder{10M12} 22r31 29r49 15|36m10
+17V13*Divide_Unsigned{12R9} 18>7 18>24 22r8 26r24 29r26 15|7b13 37l8 37t23
+18m7 Numerator{10M12} 24r54 15|8b7 18r36
+18m24 Denominator{10M12} 20r14 22r43 27r58 15|9b7 26r40 27r38 32r45
+X 15 ash_arithmetic.adb
+11m7 Quotient{14|10M12} 29m13 30r15 35r23
+12m7 Remainder{14|10M12} 21r36 23m10 24r35 26r27 27m13 27r26 32r33 36r23
+13m7 Bit_Value{14|10M12} 17m10 24r52
 14b7 Carry{boolean} 20m10 26r13
 16i11 I{integer} 18r47 30r59
-X 6 interfac.ads
-47K9*Interfaces 4|1w6 2r10 7r19 5|1w6 2r10 18r12 21r12 24r12 30r27 6|247e15
-95M9*Unsigned_64 4|2r21 7r30 5|2r21
-179V13*Shift_Left{95M9} 5|24s23 30s38
-184V13*Shift_Right{95M9} 5|18s23 21s23
+X 16 interfac.ads
+47K9*Interfaces 14|1w6 4r10 10r19 15|1w6 2r10 18r12 21r12 24r12 30r27 16|247e15
+95M9*Unsigned_64 14|4r21 10r30 15|2r21
+179V13*Shift_Left{95M9} 15|24s23 30s38
+184V13*Shift_Right{95M9} 15|18s23 21s23
+X 18 spark.ads
+15K9*SPARK 14|2r6 5r10 24r10 25r12 27r14 28r14 18|19e10
+X 19 spark-big_integers.ads
+9K15*Big_Integers=9:61 14|2w12 5r16 24r16 25r18 27r20 28r20
 

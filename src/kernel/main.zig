@@ -65,11 +65,11 @@ pub export fn kernel_main(
 
     bitmap.initPhysicalBitmap();
 
-    //    const memory_map = multiboot2.findMemoryMap(multiboot_info) orelse unreachable;
-    //    bitmap.initializeFromMemoryMap(
-    //        memory_map,
-    //        &physical.reservations,
-    //    ) catch unreachable;
+    const memory_map = multiboot2.findMemoryMap(multiboot_info) orelse unreachable;
+    bitmap.initializeFromMemoryMap(
+        memory_map,
+        &physical.reservations,
+    ) catch unreachable;
     //    if (bitmap.physicalStats()) |stats| {
     //        var stats_buffer: [128]u8 = undefined;
     //

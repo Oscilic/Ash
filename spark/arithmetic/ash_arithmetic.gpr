@@ -1,3 +1,5 @@
+with "/home/oscilic/.local/share/alire/releases/gnatprove_16.1.0_82528bef/lib/gnat/sparklib.gpr";
+
 project Ash_Arithmetic is
    for Source_Dirs use (".");
    for Object_Dir use "obj";

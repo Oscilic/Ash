@@ -32,7 +32,6 @@ pub const Shell = struct {
     fn prompt(self: *Shell) void {
         const previous_color = self.terminal.color;
 
-        self.terminal.setColor(.yellow, .black);
         self.terminal.write("Ash> ");
 
         self.terminal.color = previous_color;

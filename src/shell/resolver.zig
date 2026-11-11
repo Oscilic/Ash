@@ -11,6 +11,8 @@ pub const Command = enum {
     color,
     irqstat,
     memmap,
+    memstat,
+    memtest,
     unknown,
 };
 
@@ -26,6 +28,8 @@ pub fn resolve(name: []const u8) Command {
     if (std.mem.eql(u8, name, "color")) return .color;
     if (std.mem.eql(u8, name, "irqstat")) return .irqstat;
     if (std.mem.eql(u8, name, "memmap")) return .memmap;
+    if (std.mem.eql(u8, name, "memstat")) return .memstat;
+    if (std.mem.eql(u8, name, "memtest")) return .memtest;
     // Prioridad 2: alias
     if (std.mem.eql(u8, name, "cls")) return .clear;
     if (std.mem.eql(u8, name, "ver")) return .version;

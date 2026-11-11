@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-# Ejecutar mediante: source scripts/activate-ada.sh
-
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     echo "Usa: source scripts/activate-ada.sh"
     exit 1

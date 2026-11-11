@@ -182,6 +182,7 @@ pub fn initPhysicalBitmap() void {
 pub fn isPhysicalBitmapInitialized() bool {
     return physical_bitmap_initialized;
 }
+
 pub fn isPhysicalPageAllocated(page: usize) bool {
     if (!physical_bitmap_initialized) return false;
     if (page >= allocation_bitmap.page_count) return false;
@@ -196,6 +197,15 @@ pub fn storageAddress() usize {
 pub fn storageSize() usize {
     return physical_bitmap_storage.len;
 }
+
+pub fn allocationStorageAddress() usize {
+    return @intFromPtr(&allocation_bitmap_storage);
+}
+
+pub fn allocationStorageSize() usize {
+    return allocation_bitmap_storage.len;
+}
+
 pub const MemoryMapError = error{
     BitmapNotInitialized,
     InvalidMemoryMap,
@@ -345,6 +355,104 @@ pub fn physicalStats() ?BitmapStats {
         .occupied_pages = physical_bitmap.page_count - free,
     };
 }
+
+pub const IntegrityStats = struct {
+    checked_pages: usize,
+    violations: usize,
+};
+pub const IntegrityStatus = enum {
+    pass,
+    fail,
+    incomplete,
+    not_applicable,
+};
+
+pub const CategoryResult = struct {
+    status: IntegrityStatus = .not_applicable,
+    checked_pages: usize = 0,
+    violations: usize = 0,
+};
+
+pub const IntegrityReport = struct {
+    kernel: CategoryResult = .{},
+    multiboot: CategoryResult = .{},
+    allocator: CategoryResult = .{},
+    firmware: CategoryResult = .{},
+    low_memory: CategoryResult = .{},
+
+    pub fn passed(self: *const IntegrityReport) bool {
+        return self.kernel.status == .pass and
+            self.multiboot.status == .pass and
+            self.low_memory.status == .pass and
+            self.allocator.status != .fail and
+            self.allocator.status != .incomplete and
+            self.firmware.status != .fail and
+            self.firmware.status != .incomplete;
+    }
+};
+
+fn checkProtectedRange(
+    first_page: usize,
+    end_page: usize,
+) CategoryResult {
+    var result = CategoryResult{
+        .status = .pass,
+    };
+
+    if (!physical_bitmap_initialized or
+        first_page >= end_page or
+        end_page > physical_bitmap.page_count)
+    {
+        result.status = .incomplete;
+        return result;
+    }
+
+    for (first_page..end_page) |page| {
+        result.checked_pages += 1;
+
+        if (!physical_bitmap.isOccupied(page) or
+            allocation_bitmap.isOccupied(page))
+        {
+            result.violations += 1;
+        }
+    }
+
+    if (result.violations != 0) {
+        result.status = .fail;
+    }
+
+    return result;
+}
+
+pub fn checkReservationIntegrity(
+    table: *const physical.ReservationTable,
+) ?IntegrityStats {
+    if (!physical_bitmap_initialized) return null;
+
+    var result = IntegrityStats{
+        .checked_pages = 0,
+        .violations = 0,
+    };
+
+    for (table.entries[0..table.len]) |reservation| {
+        for (reservation.pages.first_page..reservation.pages.end_page) |page| {
+            result.checked_pages += 1;
+
+            if (page >= physical_bitmap.page_count) {
+                result.violations += 1;
+                continue;
+            }
+
+            if (!physical_bitmap.isOccupied(page) or
+                allocation_bitmap.isOccupied(page))
+            {
+                result.violations += 1;
+            }
+        }
+    }
+
+    return result;
+}
 pub fn reserveLowMemory(
     target: *Bitmap,
 ) void {
@@ -356,6 +464,189 @@ pub fn reserveLowMemory(
     for (0..limit) |page| {
         target.markOccupied(page) catch unreachable;
     }
+}
+
+pub fn isPhysicalPageOccupied(page: usize) bool {
+    if (!physical_bitmap_initialized) return true;
+    return physical_bitmap.isOccupied(page);
+}
+
+pub fn isPhysicalRangeProtected(
+    first_page: usize,
+    end_page: usize,
+) bool {
+    if (!physical_bitmap_initialized) return false;
+    if (first_page >= end_page) return false;
+    if (end_page > physical_bitmap.page_count) return false;
+
+    for (first_page..end_page) |page| {
+        if (!physical_bitmap.isOccupied(page)) {
+            return false;
+        }
+
+        if (allocation_bitmap.isOccupied(page)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+fn checkReservationKind(
+    table: *const physical.ReservationTable,
+    kind: physical.ReservationKind,
+) CategoryResult {
+    var result = CategoryResult{
+        .status = .incomplete,
+    };
+
+    var found = false;
+
+    for (table.entries[0..table.len]) |reservation| {
+        if (reservation.kind != kind) continue;
+
+        found = true;
+
+        const current = checkProtectedRange(
+            reservation.pages.first_page,
+            reservation.pages.end_page,
+        );
+
+        result.checked_pages += current.checked_pages;
+        result.violations += current.violations;
+
+        if (current.status == .incomplete) {
+            result.status = .incomplete;
+            return result;
+        }
+    }
+
+    if (!found) {
+        return result;
+    }
+
+    result.status = if (result.violations == 0)
+        .pass
+    else
+        .fail;
+
+    return result;
+}
+
+pub fn reservationIntegrityReport(
+    table: *const physical.ReservationTable,
+) ?IntegrityReport {
+    if (!physical_bitmap_initialized) return null;
+
+    var report = IntegrityReport{};
+
+    report.kernel = checkReservationKind(
+        table,
+        .kernel,
+    );
+
+    report.multiboot = checkReservationKind(
+        table,
+        .multiboot,
+    );
+
+    report.low_memory = checkProtectedRange(
+        0,
+        physical.LOW_MEMORY_PAGES,
+    );
+
+    report.allocator = checkAllocatorStorage(table);
+
+    report.firmware = .{
+        .status = .not_applicable,
+    };
+
+    return report;
+}
+
+fn isRangeReservedByKind(
+    table: *const physical.ReservationTable,
+    range: physical.PageRange,
+    kind: physical.ReservationKind,
+) bool {
+    if (range.first_page >= range.end_page) return false;
+
+    for (range.first_page..range.end_page) |page| {
+        var covered = false;
+
+        for (table.entries[0..table.len]) |reservation| {
+            if (reservation.kind != kind) continue;
+
+            if (page >= reservation.pages.first_page and
+                page < reservation.pages.end_page)
+            {
+                covered = true;
+                break;
+            }
+        }
+
+        if (!covered) return false;
+    }
+
+    return true;
+}
+
+fn checkAllocatorStorage(
+    table: *const physical.ReservationTable,
+) CategoryResult {
+    const physical_range = physical.pageRange(
+        @intFromPtr(&physical_bitmap_storage),
+        physical_bitmap_storage.len,
+    ) orelse return .{ .status = .incomplete };
+
+    const allocation_range = physical.pageRange(
+        @intFromPtr(&allocation_bitmap_storage),
+        allocation_bitmap_storage.len,
+    ) orelse return .{ .status = .incomplete };
+
+    const physical_covered = isRangeReservedByKind(
+        table,
+        physical_range,
+        .kernel,
+    );
+
+    const allocation_covered = isRangeReservedByKind(
+        table,
+        allocation_range,
+        .kernel,
+    );
+
+    if (!physical_covered or !allocation_covered) {
+        return .{ .status = .fail };
+    }
+
+    const first = checkProtectedRange(
+        physical_range.first_page,
+        physical_range.end_page,
+    );
+
+    const second = checkProtectedRange(
+        allocation_range.first_page,
+        allocation_range.end_page,
+    );
+
+    const violations = first.violations + second.violations;
+    const checked = first.checked_pages + second.checked_pages;
+
+    const status: IntegrityStatus =
+        if (first.status == .incomplete or
+        second.status == .incomplete)
+            .incomplete
+        else if (violations != 0)
+            .fail
+        else
+            .pass;
+
+    return .{
+        .status = status,
+        .checked_pages = checked,
+        .violations = violations,
+    };
 }
 //pruebas
 test "bitmap starts fully occupied" {

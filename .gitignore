@@ -1,6 +1,8 @@
+.vscode/
 /build/
 .zig-cache/
 zig-out/
 *.o
 *.elf
 *.iso
+gnatprove/
