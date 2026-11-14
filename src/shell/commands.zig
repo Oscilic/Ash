@@ -9,6 +9,212 @@ const multiboot2 = @import("../boot/multiboot2.zig");
 const kernel = @import("../kernel/main.zig");
 const physical = @import("../memory/physical.zig");
 const bitmap = @import("../memory/bitmap.zig");
+const paging = @import("../memory/paging.zig");
+const sys_info = @import("../kernel/sys_info.zig");
+
+fn rangeIsIdentityMapped(start: usize, size: usize) bool {
+    if (size == 0 or start > paging.INITIAL_MAPPED_BYTES) return false;
+    if (size > paging.INITIAL_MAPPED_BYTES - start) return false;
+
+    const first = paging.translateInitial(start) orelse return false;
+    const last_address = start + size - 1;
+    const last = paging.translateInitial(last_address) orelse return false;
+    return first == start and last == last_address;
+}
+
+fn currentStackPointer() usize {
+    return asm volatile ("mov %%esp, %[result]"
+        : [result] "=r" (-> usize),
+    );
+}
+
+fn writePagingCheck(terminal: *Terminal) void {
+    const kernel_region = physical.kernelRegion();
+    const stack_pointer = currentStackPointer();
+    const cr3 = paging.activeDirectoryAddress();
+    const prepared = paging.isPrepared();
+    const paging_enabled = paging.isEnabled();
+
+    const checks = [_]struct {
+        label: []const u8,
+        passed: bool,
+    }{
+        .{ .label = "CR0.PG:         ", .passed = paging_enabled },
+        .{
+            .label = "CR3 alignment:  ",
+            .passed = cr3 % paging.PAGE_SIZE == 0 and
+                cr3 == paging.directoryAddress(),
+        },
+        .{
+            .label = "VGA mapping:    ",
+            .passed = prepared and rangeIsIdentityMapped(0x000B8000, 1),
+        },
+        .{
+            .label = "Kernel mapping: ",
+            .passed = prepared and
+                rangeIsIdentityMapped(
+                    kernel_region.start,
+                    kernel_region.end - kernel_region.start,
+                ),
+        },
+        .{
+            .label = "Bitmap mapping: ",
+            .passed = prepared and
+                rangeIsIdentityMapped(
+                    bitmap.storageAddress(),
+                    bitmap.storageSize(),
+                ) and
+                rangeIsIdentityMapped(
+                    bitmap.allocationStorageAddress(),
+                    bitmap.allocationStorageSize(),
+                ),
+        },
+        .{
+            .label = "Stack mapping:  ",
+            .passed = prepared and
+                rangeIsIdentityMapped(stack_pointer, 1),
+        },
+    };
+
+    terminal.writeLine("ASH VMM Diagnostic");
+
+    var all_passed = true;
+    for (checks) |check| {
+        var buffer: [64]u8 = undefined;
+        const line = std.fmt.bufPrint(
+            &buffer,
+            "{s}{s}",
+            .{ check.label, if (check.passed) "PASS" else "FAIL" },
+        ) catch unreachable;
+        terminal.writeLine(line);
+        all_passed = all_passed and check.passed;
+    }
+
+    terminal.writeLine("");
+    terminal.writeLine(if (all_passed) "RESULT: PASS" else "RESULT: FAIL");
+}
+
+fn writePagingStatus(terminal: *Terminal) void {
+    var buffer: [128]u8 = undefined;
+    terminal.writeLine("ASH Virtual Memory Manager");
+    const paging_status = std.fmt.bufPrint(
+        &buffer,
+        "Paging:        {s}",
+        .{if (paging.isEnabled()) "ENABLED" else "DISABLED"},
+    ) catch unreachable;
+    terminal.writeLine(paging_status);
+
+    const architecture = std.fmt.bufPrint(
+        &buffer,
+        "Architecture:  {s}",
+        .{sys_info.architectureName()},
+    ) catch unreachable;
+    terminal.writeLine(architecture);
+
+    const page_size = std.fmt.bufPrint(
+        &buffer,
+        "Page size:     {d} KiB",
+        .{paging.PAGE_SIZE / 1024},
+    ) catch unreachable;
+    terminal.writeLine(page_size);
+
+    const initial_map = std.fmt.bufPrint(
+        &buffer,
+        "Initial map:   {d} MiB",
+        .{paging.INITIAL_MAPPED_BYTES / (1024 * 1024)},
+    ) catch unreachable;
+    terminal.writeLine(initial_map);
+
+    const page_tables = std.fmt.bufPrint(
+        &buffer,
+        "Page tables:   {d}",
+        .{paging.TABLE_COUNT},
+    ) catch unreachable;
+    terminal.writeLine(page_tables);
+
+    const directory = std.fmt.bufPrint(
+        &buffer,
+        "Directory:     0x{X:0>8}",
+        .{paging.directoryAddress()},
+    ) catch unreachable;
+    terminal.writeLine(directory);
+
+    const cr0_pg = std.fmt.bufPrint(
+        &buffer,
+        "CR0.PG:        {d}",
+        .{@intFromBool(paging.isEnabled())},
+    ) catch unreachable;
+    terminal.writeLine(cr0_pg);
+
+    const cr0_wp = std.fmt.bufPrint(
+        &buffer,
+        "CR0.WP:        {d}",
+        .{@intFromBool(paging.isWriteProtectEnabled())},
+    ) catch unreachable;
+    terminal.writeLine(cr0_wp);
+}
+
+fn writePagingTranslation(
+    terminal: *Terminal,
+    address_text: []const u8,
+) void {
+    const virtual_address = std.fmt.parseInt(usize, address_text, 0) catch {
+        terminal.writeLine("Invalid virtual address.");
+        terminal.writeLine("Usage: paging translate <address>");
+        return;
+    };
+
+    const mapping = paging.mappingInfo(virtual_address);
+    const mapped = mapping != null and mapping.?.present;
+    var buffer: [128]u8 = undefined;
+
+    const virtual_line = std.fmt.bufPrint(
+        &buffer,
+        "Virtual:   0x{X:0>8}",
+        .{virtual_address},
+    ) catch unreachable;
+    terminal.writeLine(virtual_line);
+
+    if (mapped) {
+        const physical_line = std.fmt.bufPrint(
+            &buffer,
+            "Physical:  0x{X:0>8}",
+            .{mapping.?.physical_address},
+        ) catch unreachable;
+        terminal.writeLine(physical_line);
+    } else {
+        terminal.writeLine("Physical:  NOT MAPPED");
+    }
+
+    const present_line = std.fmt.bufPrint(
+        &buffer,
+        "Present:   {s}",
+        .{if (mapped) "YES" else "NO"},
+    ) catch unreachable;
+    terminal.writeLine(present_line);
+
+    const writable_line = std.fmt.bufPrint(
+        &buffer,
+        "Writable:  {s}",
+        .{if (mapped and mapping.?.writable) "YES" else "NO"},
+    ) catch unreachable;
+    terminal.writeLine(writable_line);
+
+    const user_line = std.fmt.bufPrint(
+        &buffer,
+        "User:      {s}",
+        .{if (mapped and mapping.?.user) "YES" else "NO"},
+    ) catch unreachable;
+    terminal.writeLine(user_line);
+
+    if (mapped and mapping.?.physical_address == virtual_address) {
+        terminal.writeLine("Mapping:   IDENTITY");
+    } else if (mapped) {
+        terminal.writeLine("Mapping:   REMAPPED");
+    } else {
+        terminal.writeLine("Mapping:   NOT MAPPED");
+    }
+}
 
 fn integrityStatusText(status: bitmap.IntegrityStatus) []const u8 {
     return switch (status) {
@@ -85,11 +291,15 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
             terminal.writeLine("  memtest       ");
             terminal.writeLine("    |-* basic     Test physical memory allocation and deallocation");
             terminal.writeLine("    |-  integrity Test physical memory integrity");
+            terminal.writeLine("  paging (pag)");
+            terminal.writeLine("    |-* status     Show overall status of VMM");
+            terminal.writeLine("    |-  check      Check VMM paging integrity");
+            terminal.writeLine("    |-  translate  Translate VMM Address");
         },
 
         .version => {
             terminal.writeLine("Ash Operating System");
-            terminal.writeLine("ASH-M0.7.3-dev | IA-32");
+            terminal.writeLine("ASH-M0.8.3-dev | IA-32");
         },
 
         .echo => {
@@ -419,6 +629,49 @@ pub fn execute(terminal: *Terminal, input: []const u8) void {
             } else {
                 terminal.writeLine("Usage: memtest [*basic|integrity]");
                 terminal.writeLine("                *: Default case.");
+            }
+        },
+        .paging => {
+            var tokens = std.mem.tokenizeScalar(u8, args, ' ');
+            const subcommand = tokens.next() orelse "status";
+
+            if (std.mem.eql(u8, subcommand, "status") and tokens.next() == null) {
+                writePagingStatus(terminal);
+            } else if (std.mem.eql(u8, subcommand, "check") and tokens.next() == null) {
+                writePagingCheck(terminal);
+            } else if (std.mem.eql(u8, subcommand, "translate") or std.mem.startsWith(u8, subcommand, "translate(")) {
+                var address: []const u8 = undefined;
+                if (std.mem.eql(u8, subcommand, "translate")) {
+                    address = tokens.next() orelse {
+                        terminal.writeLine("Usage: paging translate <address>");
+                        return;
+                    };
+                    if (tokens.next() != null) {
+                        terminal.writeLine("Usage: paging translate <address>");
+                        return;
+                    }
+                } else {
+                    if (subcommand.len <= "translate()".len or
+                        subcommand[subcommand.len - 1] != ')')
+                    {
+                        terminal.writeLine("Usage: paging translate <address>");
+                        return;
+                    }
+                    address = subcommand["translate(".len .. subcommand.len - 1];
+                    if (tokens.next() != null) {
+                        terminal.writeLine("Usage: paging translate <address>");
+                        return;
+                    }
+                }
+
+                if (address.len == 0) {
+                    terminal.writeLine("Usage: paging translate <address>");
+                    return;
+                }
+                writePagingTranslation(terminal, address);
+            } else {
+                terminal.writeLine("Usage: paging [*status|check|translate <address>]");
+                terminal.writeLine("               *: Default case.");
             }
         },
     }

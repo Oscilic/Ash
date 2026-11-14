@@ -13,6 +13,7 @@ pub const Command = enum {
     memmap,
     memstat,
     memtest,
+    paging,
     unknown,
 };
 
@@ -30,10 +31,13 @@ pub fn resolve(name: []const u8) Command {
     if (std.mem.eql(u8, name, "memmap")) return .memmap;
     if (std.mem.eql(u8, name, "memstat")) return .memstat;
     if (std.mem.eql(u8, name, "memtest")) return .memtest;
+    if (std.mem.eql(u8, name, "paging")) return .paging;
+
     // Prioridad 2: alias
     if (std.mem.eql(u8, name, "cls")) return .clear;
     if (std.mem.eql(u8, name, "ver")) return .version;
     if (std.mem.eql(u8, name, "col")) return .color;
+    if (std.mem.eql(u8, name, "pag")) return .paging;
 
     return .unknown;
 }

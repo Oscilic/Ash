@@ -360,3 +360,46 @@ test "usable range respects bitmap capacity" {
         pages.end_page,
     );
 }
+test "kernel reservation overrides usable memory range" {
+    const std = @import("std");
+
+    var table = ReservationTable{};
+
+    // 0x00100000 - 0x00110000
+    const usable = usablePageRange(
+        0x00100000,
+        0x00010000,
+        1024,
+    ).?;
+
+    // 0x00100000 - 0x00103000
+    const kernel = pageRange(
+        0x00100000,
+        0x3000,
+    ).?;
+
+    try table.reserve(kernel, .kernel);
+
+    try std.testing.expectEqual(
+        @as(usize, 256),
+        usable.first_page,
+    );
+
+    try std.testing.expectEqual(
+        @as(usize, 272),
+        usable.end_page,
+    );
+
+    for (kernel.first_page..kernel.end_page) |page| {
+        try std.testing.expect(table.isReserved(page));
+    }
+
+    for (kernel.end_page..usable.end_page) |page| {
+        try std.testing.expect(!table.isReserved(page));
+    }
+
+    try std.testing.expectEqual(
+        @as(usize, 3),
+        table.countUniquePages(),
+    );
+}

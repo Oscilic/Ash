@@ -60,8 +60,8 @@ pub export fn ash_exception_handler(
 
     vga.clear(attr);
 
-    writeAt(2, 1, "ASH / AMBER SCREEN OF DEATH", attr);
-    writeAt(2, 3, "A critical CPU exception occurred.", attr);
+    writeAt(2, 1, "AMBER SCREEN OF DEATH", attr);
+    writeAt(2, 2, "Your system ran into a critical exception and will shut down.", attr);
 
     writeAt(2, 5, "EXCEPTION:", attr);
 
@@ -76,6 +76,16 @@ pub export fn ash_exception_handler(
 
     writeAt(2, 8, "ERROR:", attr);
     writeHex(13, 8, frame.error_code, attr);
+
+    if (frame.vector == 14) {
+        const fault_address: u32 =
+            asm volatile ("mov %%cr2, %[result]"
+                : [result] "=r" (-> u32),
+            );
+
+        writeAt(2, 9, "CR2:", attr);
+        writeHex(13, 9, fault_address, attr);
+    }
 
     writeAt(2, 10, "EIP:", attr);
     writeHex(13, 10, frame.eip, attr);
@@ -134,4 +144,44 @@ fn writeHex(
 
         vga.putCell(x + 2 + i, y, digits[digit], attr);
     }
+}
+
+fn writePageFaultDetails(
+    error_code: u32,
+    attr: u8,
+) void {
+    const address: u32 = asm volatile ("mov %%cr2, %[result]"
+        : [result] "=r" (-> u32),
+    );
+
+    const present = (error_code & 0x1) != 0;
+    const write = (error_code & 0x2) != 0;
+    const user = (error_code & 0x4) != 0;
+
+    writeAt(2, 9, "CR2:", attr);
+    writeHex(13, 9, address, attr);
+
+    writeAt(2, 18, "ACCESS:", attr);
+    writeAt(
+        13,
+        18,
+        if (write) "WRITE" else "READ",
+        attr,
+    );
+
+    writeAt(2, 19, "REASON:", attr);
+    writeAt(
+        13,
+        19,
+        if (present) "PROTECTION" else "NOT PRESENT",
+        attr,
+    );
+
+    writeAt(2, 21, "MODE:", attr);
+    writeAt(
+        13,
+        21,
+        if (user) "USER" else "SUPERVISOR",
+        attr,
+    );
 }

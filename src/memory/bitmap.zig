@@ -137,7 +137,6 @@ pub const PhysicalAllocator = struct {
             return error.InvalidPage;
         }
 
-        // Solo liberamos páginas entregadas por esta API.
         if (!self.allocations.isOccupied(page)) {
             return error.NotAllocated;
         }
@@ -153,8 +152,7 @@ pub const PhysicalAllocator = struct {
 
 pub const MAX_PHYSICAL_PAGES: usize = 1_048_576;
 
-pub const BITMAP_BYTES: usize =
-    MAX_PHYSICAL_PAGES / 8;
+pub const BITMAP_BYTES: usize = MAX_PHYSICAL_PAGES / 8;
 
 var physical_bitmap_storage: [BITMAP_BYTES]u8 = undefined;
 

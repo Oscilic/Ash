@@ -9,6 +9,7 @@ const cpu = @import("../arch/x86/cpu.zig");
 const physical = @import("../memory/physical.zig");
 const multiboot2 = @import("../boot/multiboot2.zig");
 const bitmap = @import("../memory/bitmap.zig");
+const paging = @import("../memory/paging.zig");
 const std = @import("std");
 
 const scancode_queue = @import("../drivers/input/scancode_queue.zig");
@@ -24,6 +25,30 @@ fn halt() noreturn {
     }
 }
 
+fn isInitiallyMapped(address: usize, size: usize) bool {
+    if (address > paging.INITIAL_MAPPED_BYTES) {
+        return false;
+    }
+
+    return size <= paging.INITIAL_MAPPED_BYTES - address;
+}
+
+fn bitmapMemoryIsMapped() bool {
+    return isInitiallyMapped(
+        bitmap.storageAddress(),
+        bitmap.storageSize(),
+    ) and isInitiallyMapped(
+        bitmap.allocationStorageAddress(),
+        bitmap.allocationStorageSize(),
+    );
+}
+
+fn currentStackPointer() usize {
+    return asm volatile ("mov %%esp, %[result]"
+        : [result] "=r" (-> usize),
+    );
+}
+
 pub export fn kernel_main(
     magic: u32,
     multiboot_info: u32,
@@ -36,7 +61,7 @@ pub export fn kernel_main(
         terminal.writeLine("ASH: Invalid Multiboot2 magic!");
         halt();
     }
-    const bool_size = multiboot2.infoSize(
+    const bool_info_size = multiboot2.infoSize(
         multiboot_info,
     ) orelse {
         terminal.setColor(.light_red, .black);
@@ -46,7 +71,7 @@ pub export fn kernel_main(
     physical.reserveBootRegions(
         &physical.reservations,
         multiboot_info,
-        bool_size,
+        bool_info_size,
     ) catch {
         terminal.setColor(.light_red, .black);
         terminal.writeLine("ASH: Failed to reserve boot memory!");
@@ -64,12 +89,75 @@ pub export fn kernel_main(
     //    terminal.writeLine(reserve_message);
 
     bitmap.initPhysicalBitmap();
+    paging.prepare() catch {
+        terminal.setColor(.light_red, .black);
+        terminal.writeLine("ASH: Failed to prepare paging!");
+        halt();
+    };
+
+    // const translated = paging.translateInitial(0x00100000);
+
+    // if (translated != null and translated.? == 0x00100000) {
+    //     terminal.writeLine("ASH VMM: Identity mapping PASS");
+    // } else {
+    //     terminal.writeLine("ASH VMM: Identity mapping FAIL");
+    //     halt();
+    // }
+
+    // const test_addresses = [_]usize{
+    //     0x000B8000, // VGA
+    //     0x00100000, // Kernel
+    //     0x003FFFFF, // Final de la primera tabla
+    //     0x00400000, // Inicio de la segunda tabla
+    //     0x00800000, // Inicio de la tercera tabla
+    //     0x00C00000, // Inicio de la cuarta tabla
+    //     0x00FFFFFF, // Último byte de los 16 MiB
+    // };
+
+    // var mapping_ok = paging.isPrepared();
+
+    // for (test_addresses) |address| {
+    //     const translated_addr = paging.translateInitial(address);
+
+    //     if (translated_addr == null or translated_addr.? != address) {
+    //         mapping_ok = false;
+    //         break;
+    //     }
+    // }
+
+    // if (mapping_ok and paging.translateInitial(0x01000000) == null) {
+    //     terminal.writeLine("ASH VMM: Identity mapping 16 MiB PASS");
+    // } else {
+    //     terminal.writeLine("ASH VMM: Identity mapping 16 MiB FAIL");
+    //     halt();
+    // }
 
     const memory_map = multiboot2.findMemoryMap(multiboot_info) orelse unreachable;
     bitmap.initializeFromMemoryMap(
         memory_map,
         &physical.reservations,
     ) catch unreachable;
+
+    // const stack_pointer = currentStackPointer();
+
+    // if (stack_pointer == 0 or
+    //     stack_pointer > paging.INITIAL_MAPPED_BYTES)
+    // {
+    //     terminal.setColor(.light_red, .black);
+    //     terminal.writeLine("ASH VMM: Stack outside identity mapping!");
+    //     halt();
+    // }
+
+    // terminal.writeLine("ASH VMM: Stack mapping PASS");
+
+    // if (!bitmapMemoryIsMapped()) {
+    //     terminal.setColor(.light_red, .black);
+    //     terminal.writeLine("ASH VMM: Bitmap outside identity mapping!");
+    //     halt();
+    // }
+
+    // terminal.writeLine("ASH VMM: Bitmap mapping PASS");
+
     //    if (bitmap.physicalStats()) |stats| {
     //        var stats_buffer: [128]u8 = undefined;
     //
@@ -175,6 +263,11 @@ pub export fn kernel_main(
 
     gdt.init();
     idt.init();
+    paging.enable();
+    // terminal.setColor(.light_green, .black);
+    // terminal.writeLine("Ash Paging enabled successfully.");
+    // terminal.setColor(.white, .black);
+
     pic.init();
     pit.init();
 
